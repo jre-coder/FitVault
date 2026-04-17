@@ -1,0 +1,406 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DD00000000000000000000D1 /* FitVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C1 /* FitVaultApp.swift */; };
+		DD00000000000000000000D2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C2 /* ContentView.swift */; };
+		DD00000000000000000000D3 /* WorkoutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C3 /* WorkoutItem.swift */; };
+		DD00000000000000000000D4 /* WorkoutListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C4 /* WorkoutListView.swift */; };
+		DD00000000000000000000D5 /* AddWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C5 /* AddWorkoutView.swift */; };
+		DD00000000000000000000D6 /* WorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C6 /* WorkoutDetailView.swift */; };
+		DD00000000000000000000D7 /* EditWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C7 /* EditWorkoutView.swift */; };
+		DD00000000000000000000D8 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C8 /* BrowseView.swift */; };
+		DD00000000000000000000D9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000C9 /* Assets.xcassets */; };
+		DD00000000000000000000DA /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000CA /* Config.swift */; };
+		DD00000000000000000000DB /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000CB /* SubscriptionManager.swift */; };
+		DD00000000000000000000DC /* ClaudeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000CC /* ClaudeService.swift */; };
+		DD00000000000000000000DD /* AIWorkoutSuggestion.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000CD /* AIWorkoutSuggestion.swift */; };
+		DD00000000000000000000DE /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000CE /* PaywallView.swift */; };
+		DD00000000000000000000DF /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000CF /* DiscoverView.swift */; };
+		DD00000000000000000000E0 /* ForYouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC00000000000000000000D0 /* ForYouView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA00000000000000000000A2 /* FitVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC00000000000000000000C1 /* FitVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitVaultApp.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C3 /* WorkoutItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutItem.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C4 /* WorkoutListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutListView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C5 /* AddWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddWorkoutView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C6 /* WorkoutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDetailView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C7 /* EditWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditWorkoutView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C8 /* BrowseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000C9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CC00000000000000000000CA /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		CC00000000000000000000CB /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		CC00000000000000000000CC /* ClaudeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeService.swift; sourceTree = "<group>"; };
+		CC00000000000000000000CD /* AIWorkoutSuggestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIWorkoutSuggestion.swift; sourceTree = "<group>"; };
+		CC00000000000000000000CE /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000CF /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
+		CC00000000000000000000D0 /* ForYouView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForYouView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		EE00000000000000000000E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BB00000000000000000000B1 /* FitVault */ = {
+			isa = PBXGroup;
+			children = (
+				BB00000000000000000000B2 /* FitVault */,
+				BB00000000000000000000B5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB00000000000000000000B2 /* FitVault */ = {
+			isa = PBXGroup;
+			children = (
+				CC00000000000000000000C1 /* FitVaultApp.swift */,
+				CC00000000000000000000CA /* Config.swift */,
+				CC00000000000000000000C2 /* ContentView.swift */,
+				BB00000000000000000000B3 /* Models */,
+				BB00000000000000000000B4 /* Views */,
+				BB00000000000000000000B7 /* Services */,
+				CC00000000000000000000C9 /* Assets.xcassets */,
+			);
+			path = FitVault;
+			sourceTree = "<group>";
+		};
+		BB00000000000000000000B3 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				CC00000000000000000000C3 /* WorkoutItem.swift */,
+				CC00000000000000000000CD /* AIWorkoutSuggestion.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BB00000000000000000000B4 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				CC00000000000000000000C4 /* WorkoutListView.swift */,
+				CC00000000000000000000C5 /* AddWorkoutView.swift */,
+				CC00000000000000000000C6 /* WorkoutDetailView.swift */,
+				CC00000000000000000000C7 /* EditWorkoutView.swift */,
+				CC00000000000000000000C8 /* BrowseView.swift */,
+				CC00000000000000000000CE /* PaywallView.swift */,
+				CC00000000000000000000CF /* DiscoverView.swift */,
+				CC00000000000000000000D0 /* ForYouView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		BB00000000000000000000B7 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				CC00000000000000000000CB /* SubscriptionManager.swift */,
+				CC00000000000000000000CC /* ClaudeService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		BB00000000000000000000B5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000000A2 /* FitVault.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA00000000000000000000A3 /* FitVault */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF00000000000000000000F6 /* Build configuration list for PBXNativeTarget "FitVault" */;
+			buildPhases = (
+				EE00000000000000000000E1 /* Sources */,
+				EE00000000000000000000E2 /* Frameworks */,
+				EE00000000000000000000E3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FitVault;
+			productName = FitVault;
+			productReference = AA00000000000000000000A2 /* FitVault.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA00000000000000000000A1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					AA00000000000000000000A3 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = FF00000000000000000000F5 /* Build configuration list for PBXProject "FitVault" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = BB00000000000000000000B1;
+			productRefGroup = BB00000000000000000000B5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA00000000000000000000A3 /* FitVault */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EE00000000000000000000E3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD00000000000000000000D9 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		EE00000000000000000000E1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD00000000000000000000D1 /* FitVaultApp.swift in Sources */,
+				DD00000000000000000000D2 /* ContentView.swift in Sources */,
+				DD00000000000000000000D3 /* WorkoutItem.swift in Sources */,
+				DD00000000000000000000D4 /* WorkoutListView.swift in Sources */,
+				DD00000000000000000000D5 /* AddWorkoutView.swift in Sources */,
+				DD00000000000000000000D6 /* WorkoutDetailView.swift in Sources */,
+				DD00000000000000000000D7 /* EditWorkoutView.swift in Sources */,
+				DD00000000000000000000D8 /* BrowseView.swift in Sources */,
+				DD00000000000000000000DA /* Config.swift in Sources */,
+				DD00000000000000000000DB /* SubscriptionManager.swift in Sources */,
+				DD00000000000000000000DC /* ClaudeService.swift in Sources */,
+				DD00000000000000000000DD /* AIWorkoutSuggestion.swift in Sources */,
+				DD00000000000000000000DE /* PaywallView.swift in Sources */,
+				DD00000000000000000000DF /* DiscoverView.swift in Sources */,
+				DD00000000000000000000E0 /* ForYouView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		FF00000000000000000000F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		FF00000000000000000000F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		FF00000000000000000000F3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fitvault.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		FF00000000000000000000F4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fitvault.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FF00000000000000000000F5 /* Build configuration list for PBXProject "FitVault" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF00000000000000000000F1 /* Debug */,
+				FF00000000000000000000F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF00000000000000000000F6 /* Build configuration list for PBXNativeTarget "FitVault" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF00000000000000000000F3 /* Debug */,
+				FF00000000000000000000F4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA00000000000000000000A1 /* Project object */;
+}
