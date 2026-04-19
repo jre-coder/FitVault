@@ -67,10 +67,10 @@ That moment of seeing the problem clearly but not the fix — that is the conver
 
 ## Immediate Fixes (Blocking — Do First)
 
-- [ ] **AI links not returning specific workouts** — search URLs must use `creator + title`, not title alone
-- [ ] **TikTok links going to YouTube** — stale closure bug in `handleFind` (selectedPlatforms not in dep array)
-- [ ] **Platform enforcement** — validate Claude's returned platform against user's selection
-- [ ] **Search URL quality** — use `/search/video?q=` for TikTok; include creator name in all queries
+- [x] **AI links not returning specific workouts** — AI now returns creator handles and links directly to channel/profile pages (`youtube.com/@handle`, `instagram.com/handle/`, `tiktok.com/@handle`); falls back to Google site-search when handle is unknown
+- [x] **TikTok links going to YouTube** — stale closure bug in `handleFind` fixed (selectedPlatforms added to dep array)
+- [x] **Platform enforcement** — Claude's returned platform is validated against user's selection post-response; mismatched platforms are overridden and handles cleared to prevent wrong-platform URLs
+- [x] **Search URL quality** — creator name included in all search queries; TikTok falls back to `google.com/search?q=site:tiktok.com+...` for better results
 - [ ] **Share sheet integration** — research iOS Share Extension so users can send links directly from YouTube/Instagram/TikTok into FitVault without copy-paste
 - [ ] **Image import with OCR** — allow multi-image upload; use Apple Vision to read text from screenshots (exercise lists, video descriptions) and parse into structured workout data
 
@@ -254,6 +254,31 @@ That moment of seeing the problem clearly but not the fix — that is the conver
   - [ ] Follow creators
   - [ ] Follow other users
   - [ ] Workout challenges
+
+---
+
+## Future Considerations
+
+### Specific Video Links via Platform APIs
+
+**Context:** The current AI recommendation flow links users to creator profile pages (e.g. `youtube.com/@jeffnippard`) rather than specific workout videos. This is the best a standalone LLM can do — no model tier (Haiku, Sonnet, or Opus) can return reliable direct video URLs because they lack real-time internet access and video URLs change.
+
+**The real solution** is a two-step architecture:
+1. Claude picks the best creators and workout types for the user's goal
+2. A backend service calls platform search APIs to return specific video links with thumbnails and view counts
+
+**Platform API landscape:**
+- **YouTube Data API v3** — free up to 10,000 queries/day; returns direct video links, thumbnails, titles, view counts. Most viable for V1.
+- **TikTok Research API** — restricted; requires business approval. Low priority.
+- **Instagram Graph API** — similarly restricted. Low priority.
+
+**Architecture requirement:** API keys cannot live in the mobile app (exposed in the bundle). Requires a lightweight backend proxy (Cloudflare Worker, Vercel Edge Function, or full backend). This is also the natural gate for the premium subscription tier — free users get creator profile links, paid users get specific video results.
+
+**UI approach:** Surface as a user-configurable "Search Mode" toggle on Discover and For You screens:
+- **Creator Browse** (default, free) — links to creator channel/profile
+- **Find Videos** (enhanced, paid) — returns specific videos via YouTube API
+
+This feature is architecturally dependent on the backend proxy work and should be built alongside or after the subscription infrastructure.
 
 ---
 

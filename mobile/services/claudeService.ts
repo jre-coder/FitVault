@@ -6,9 +6,10 @@ const API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY ?? ''
 
 const JSON_FORMAT_INSTRUCTIONS = `Return ONLY valid JSON with no markdown, no code fences, no extra text.
 Use this exact structure:
-{"recommendations":[{"rank":1,"title":"...","creator":"Creator or Channel Name","platform":"youtube|instagram|tiktok|website|other","targetMuscles":["Full Body"],"description":"2-sentence description","explanation":"<explanation key>","durationMinutes":20,"difficulty":"Beginner|Intermediate|Advanced"}]}
+{"recommendations":[{"rank":1,"title":"...","creator":"Creator or Channel Name","handle":"@platformhandle","platform":"youtube|instagram|tiktok|website|other","targetMuscles":["Full Body"],"description":"2-sentence description","explanation":"<explanation key>","durationMinutes":20,"difficulty":"Beginner|Intermediate|Advanced"}]}
 Recommend real, well-known creators and programs with large followings. Prioritize content that is popular, highly rated, and widely recommended by the fitness community.
 creator MUST be the real name of the YouTube channel, TikTok account, or content creator.
+handle MUST be the exact platform handle/username (e.g. "@jeffnippard" for YouTube/TikTok, "jeffnippard" for Instagram). Only include handle if you are 100% certain of the exact handle. If unsure, use empty string "".
 targetMuscles values MUST be from this list only: Full Body, Chest, Back, Shoulders, Arms, Core, Legs, Glutes, Cardio, Mobility
 platform must match one of the requested platforms.`
 
@@ -16,13 +17,23 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function platformSearchURL(title: string, creator: string, platform: string): string {
+function buildURL(title: string, creator: string, handle: string, platform: string): string {
   const q = encodeURIComponent(`${creator} ${title}`.trim())
   switch (platform) {
-    case 'youtube': return `https://www.youtube.com/results?search_query=${q}`
-    case 'tiktok': return `https://www.tiktok.com/search/video?q=${q}`
-    case 'instagram': return `https://www.google.com/search?q=site%3Ainstagram.com+${q}`
-    default: return `https://www.google.com/search?q=${q}+workout`
+    case 'youtube':
+      return handle
+        ? `https://www.youtube.com/${handle}`
+        : `https://www.youtube.com/results?search_query=${q}`
+    case 'tiktok':
+      return handle
+        ? `https://www.tiktok.com/${handle}`
+        : `https://www.google.com/search?q=site%3Atiktok.com+${q}`
+    case 'instagram':
+      return handle
+        ? `https://www.instagram.com/${handle}/`
+        : `https://www.google.com/search?q=site%3Ainstagram.com+${q}`
+    default:
+      return `https://www.google.com/search?q=${q}+workout`
   }
 }
 
@@ -56,12 +67,11 @@ async function callClaude(prompt: string, allowedPlatforms?: string[]): Promise<
   const parsed = JSON.parse(cleaned) as { recommendations: Omit<AIWorkoutSuggestion, 'id' | 'url'>[] }
 
   return parsed.recommendations.map((r) => {
-    const platform =
-      allowedPlatforms?.length && !allowedPlatforms.includes(r.platform)
-        ? allowedPlatforms[0]
-        : r.platform
+    const platformOverridden = allowedPlatforms?.length && !allowedPlatforms.includes(r.platform)
+    const platform = platformOverridden ? allowedPlatforms[0] : r.platform
     const creator = r.creator ?? ''
-    return { ...r, id: generateId(), creator, platform, url: platformSearchURL(r.title, creator, platform) }
+    const handle = platformOverridden ? '' : (r.handle ?? '')
+    return { ...r, id: generateId(), creator, handle, platform, url: buildURL(r.title, creator, handle, platform) }
   })
 }
 

@@ -31,6 +31,7 @@ export interface AIWorkoutSuggestion {
   rank: number
   title: string
   creator: string
+  handle: string
   url: string
   platform: string
   targetMuscles: string[]
