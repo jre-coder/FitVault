@@ -53,5 +53,5 @@ mobile/.env
 mobile/.env.local
 mobile/.env.*.local
 
-# Claude Code
-.claude/
+# Claude Code — commit settings.json (project hooks/config), ignore personal files
+.claude/settings.local.json

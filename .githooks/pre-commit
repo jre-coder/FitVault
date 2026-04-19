@@ -1,0 +1,10 @@
+#!/bin/sh
+# Run full test suite before every commit. Blocks commit on failure.
+echo "Running tests before commit..."
+cd mobile && npm test -- --no-coverage --ci
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "Tests failed. Commit blocked. Fix failing tests before committing."
+  exit 1
+fi
+echo "All tests passed."
