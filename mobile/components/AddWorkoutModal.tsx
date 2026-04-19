@@ -20,6 +20,7 @@ import { BodyPart, SourceType } from '../types'
 interface AddWorkoutModalProps {
   visible: boolean
   onClose: () => void
+  initialURL?: string
 }
 
 function detectSource(url: string): SourceType {
@@ -30,7 +31,7 @@ function detectSource(url: string): SourceType {
   return 'other'
 }
 
-export default function AddWorkoutModal({ visible, onClose }: AddWorkoutModalProps) {
+export default function AddWorkoutModal({ visible, onClose, initialURL }: AddWorkoutModalProps) {
   const { addWorkout } = useWorkouts()
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
@@ -41,12 +42,17 @@ export default function AddWorkoutModal({ visible, onClose }: AddWorkoutModalPro
 
   useEffect(() => {
     if (visible) {
-      Clipboard.getStringAsync().then((text) => {
-        if (text.startsWith('http') && !url) {
-          setUrl(text)
-          setSourceType(detectSource(text))
-        }
-      })
+      if (initialURL) {
+        setUrl(initialURL)
+        setSourceType(detectSource(initialURL))
+      } else {
+        Clipboard.getStringAsync().then((text) => {
+          if (text.startsWith('http') && !url) {
+            setUrl(text)
+            setSourceType(detectSource(text))
+          }
+        })
+      }
     }
   }, [visible])
 
