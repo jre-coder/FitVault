@@ -19,6 +19,7 @@ export const SOURCE_TYPES: SourceType[] = [
   'tiktok',
   'website',
   'other',
+  'photo',
 ]
 
 export const SOURCE_LABELS: Record<SourceType, string> = {
@@ -27,6 +28,7 @@ export const SOURCE_LABELS: Record<SourceType, string> = {
   tiktok: 'TikTok',
   website: 'Website',
   other: 'Other',
+  photo: 'Photo',
 }
 
 export const SOURCE_ICONS: Record<SourceType, string> = {
@@ -35,6 +37,7 @@ export const SOURCE_ICONS: Record<SourceType, string> = {
   tiktok: 'musical-notes',
   website: 'globe-outline',
   other: 'link-outline',
+  photo: 'camera-outline',
 }
 
 export const SOURCE_COLORS: Record<SourceType, string> = {
@@ -43,6 +46,7 @@ export const SOURCE_COLORS: Record<SourceType, string> = {
   tiktok: '#333333',
   website: '#007AFF',
   other: '#8E8E93',
+  photo: '#34C759',
 }
 
 export const BODY_PART_ICONS: Record<BodyPart, string> = {

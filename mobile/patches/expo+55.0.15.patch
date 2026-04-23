@@ -1,0 +1,12 @@
+diff --git a/node_modules/expo/ios/AppDelegates/EXReactRootViewFactory.h b/node_modules/expo/ios/AppDelegates/EXReactRootViewFactory.h
+index 2daec5d..4207ef6 100644
+--- a/node_modules/expo/ios/AppDelegates/EXReactRootViewFactory.h
++++ b/node_modules/expo/ios/AppDelegates/EXReactRootViewFactory.h
+@@ -4,6 +4,7 @@
+ 
+ #import <ExpoModulesCore/Platform.h>
+ #import <Expo/RCTAppDelegateUmbrella.h>
++#import <React/RCTDevMenu.h>
+ 
+ NS_ASSUME_NONNULL_BEGIN
+ 

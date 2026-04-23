@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS, SOURCE_COLORS, SOURCE_ICONS } from '../constants'
 import { WorkoutItem } from '../types'
@@ -14,12 +14,18 @@ export default function WorkoutRow({ workout, onPress }: WorkoutRowProps) {
   const sourceIcon = SOURCE_ICONS[workout.sourceType]
   const displayedBodyParts = workout.bodyParts.slice(0, 3)
   const overflow = workout.bodyParts.length - 3
+  const thumbnail = workout.imageUris?.[0]
+  const isPhoto = workout.sourceType === 'photo'
 
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.iconBox, { backgroundColor: sourceColor + '26' }]}>
-        <Ionicons name={sourceIcon as never} size={22} color={sourceColor} />
-      </View>
+      {thumbnail ? (
+        <Image source={{ uri: thumbnail }} style={styles.thumbnail} />
+      ) : (
+        <View style={[styles.iconBox, { backgroundColor: sourceColor + '26' }]}>
+          <Ionicons name={sourceIcon as never} size={22} color={sourceColor} />
+        </View>
+      )}
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text style={styles.title} numberOfLines={1}>
@@ -42,7 +48,9 @@ export default function WorkoutRow({ workout, onPress }: WorkoutRowProps) {
           )}
         </View>
         <Text style={styles.url} numberOfLines={1}>
-          {workout.url}
+          {isPhoto
+            ? `${workout.imageUris?.length ?? 1} photo${(workout.imageUris?.length ?? 1) > 1 ? 's' : ''} · ${workout.exercises?.length ?? 0} exercises`
+            : workout.url}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={COLORS.secondaryText} />
@@ -65,6 +73,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  thumbnail: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
   },
   content: {
     flex: 1,

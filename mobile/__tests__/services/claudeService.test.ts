@@ -165,8 +165,8 @@ describe('fetchTopWorkouts', () => {
   })
 
   it('throws on non-ok API response', async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401 } as Response)
-    await expect(fetchTopWorkouts('Back', ['youtube'], ['any'])).rejects.toThrow('Claude API error: 401')
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => 'Unauthorized' } as unknown as Response)
+    await expect(fetchTopWorkouts('Back', ['youtube'], ['any'])).rejects.toThrow('Claude API error 401')
   })
 })
 

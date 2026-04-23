@@ -81,7 +81,8 @@ function DiscoverContent() {
         setResults(data)
       }
     } catch (e) {
-      setError('Failed to fetch recommendations. Check your API key and connection.')
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(msg)
     } finally {
       setIsLoading(false)
     }

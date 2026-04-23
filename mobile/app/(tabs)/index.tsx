@@ -1,7 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import {
+  ActionSheetIOS,
   FlatList,
   ListRenderItem,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,15 +17,17 @@ import { BODY_PARTS, COLORS } from '../../constants'
 import { useWorkouts } from '../../context/WorkoutContext'
 import { BodyPart, WorkoutItem } from '../../types'
 import AddWorkoutModal from '../../components/AddWorkoutModal'
+import PhotoImportModal from '../../components/PhotoImportModal'
 import WorkoutDetailModal from '../../components/WorkoutDetailModal'
 import FilterChip from '../../components/FilterChip'
 import WorkoutRow from '../../components/WorkoutRow'
 
 export default function MyWorkoutsScreen() {
-  const { workouts } = useWorkouts()
+  const { workouts, addWorkout } = useWorkouts()
   const [searchText, setSearchText] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<BodyPart | null>(null)
   const [showAdd, setShowAdd] = useState(false)
+  const [showPhotoImport, setShowPhotoImport] = useState(false)
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutItem | null>(null)
 
   const filteredWorkouts = useMemo(() => {
@@ -56,12 +60,30 @@ export default function MyWorkoutsScreen() {
   }, [])
 
   const handleOpenAdd = useCallback(() => {
-    setShowAdd(true)
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: ['Cancel', 'Add Link', 'Import from Photos'], cancelButtonIndex: 0 },
+        (index) => {
+          if (index === 1) setShowAdd(true)
+          if (index === 2) setShowPhotoImport(true)
+        }
+      )
+    } else {
+      setShowAdd(true)
+    }
   }, [])
 
   const handleCloseAdd = useCallback(() => {
     setShowAdd(false)
   }, [])
+
+  const handlePhotoSave = useCallback(
+    (data: Omit<WorkoutItem, 'id' | 'dateAdded' | 'isFavorite'>) => {
+      addWorkout({ ...data, isFavorite: false })
+      setShowPhotoImport(false)
+    },
+    [addWorkout]
+  )
 
   const renderItem: ListRenderItem<WorkoutItem> = useCallback(
     ({ item }) => <WorkoutRow workout={item} onPress={() => handleSelectWorkout(item)} />,
@@ -152,6 +174,12 @@ export default function MyWorkoutsScreen() {
       )}
 
       <AddWorkoutModal visible={showAdd} onClose={handleCloseAdd} />
+
+      <PhotoImportModal
+        visible={showPhotoImport}
+        onClose={() => setShowPhotoImport(false)}
+        onSave={handlePhotoSave}
+      />
 
       {selectedWorkout && (
         <WorkoutDetailModal workout={selectedWorkout} onClose={handleCloseDetail} />

@@ -22,12 +22,6 @@
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "appleId": "reganjen@yahoo.com",
-        "ascAppId": "",
-        "appleTeamId": ""
-      }
-    }
+    "production": {}
   }
 }

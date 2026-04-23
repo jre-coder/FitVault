@@ -111,8 +111,9 @@ function ForYouContent() {
         workoutTypes: selectedWorkoutTypes,
       })
       setResults(data)
-    } catch {
-      setError('Failed to fetch recommendations. Check your API key and connection.')
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(msg)
     } finally {
       setIsLoading(false)
     }

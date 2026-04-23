@@ -38,12 +38,17 @@ function buildURL(title: string, creator: string, handle: string, platform: stri
 }
 
 async function callClaude(prompt: string, allowedPlatforms?: string[]): Promise<AIWorkoutSuggestion[]> {
+  if (!API_KEY) {
+    throw new Error('EXPO_PUBLIC_CLAUDE_API_KEY is not set. Check your .env.local file.')
+  }
+
   const response = await fetch(CLAUDE_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': API_KEY,
       'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
@@ -53,7 +58,8 @@ async function callClaude(prompt: string, allowedPlatforms?: string[]): Promise<
   })
 
   if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`)
+    const body = await response.text()
+    throw new Error(`Claude API error ${response.status}: ${body.slice(0, 200)}`)
   }
 
   const data = await response.json()

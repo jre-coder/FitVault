@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import {
   Alert,
+  Image,
   Linking,
   Modal,
   SafeAreaView,
@@ -25,6 +26,8 @@ export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailMo
   const { toggleFavorite, deleteWorkout } = useWorkouts()
   const [showEdit, setShowEdit] = useState(false)
 
+  const isPhoto = workout.sourceType === 'photo'
+  const thumbnail = workout.imageUris?.[0]
   const sourceColor = SOURCE_COLORS[workout.sourceType]
   const sourceIcon = SOURCE_ICONS[workout.sourceType]
   const formattedDate = new Date(workout.dateAdded).toLocaleDateString('en-US', {
@@ -81,19 +84,25 @@ export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailMo
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.headerCard}>
-            <View style={[styles.sourceIconBox, { backgroundColor: sourceColor + '26' }]}>
-              <Ionicons name={sourceIcon as never} size={32} color={sourceColor} />
-            </View>
+            {thumbnail ? (
+              <Image source={{ uri: thumbnail }} style={styles.thumbnailHero} />
+            ) : (
+              <View style={[styles.sourceIconBox, { backgroundColor: sourceColor + '26' }]}>
+                <Ionicons name={sourceIcon as never} size={32} color={sourceColor} />
+              </View>
+            )}
             <Text style={styles.title}>{workout.title}</Text>
             <Text style={styles.sourceMeta}>
               {SOURCE_LABELS[workout.sourceType]} · Added {formattedDate}
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.openLinkButton} onPress={handleOpenLink} activeOpacity={0.8}>
-            <Ionicons name="open-outline" size={18} color="#FFFFFF" />
-            <Text style={styles.openLinkText}>Open Link</Text>
-          </TouchableOpacity>
+          {!isPhoto && (
+            <TouchableOpacity style={styles.openLinkButton} onPress={handleOpenLink} activeOpacity={0.8}>
+              <Ionicons name="open-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.openLinkText}>Open Link</Text>
+            </TouchableOpacity>
+          )}
 
           {workout.bodyParts.length > 0 && (
             <View style={styles.section}>
@@ -108,10 +117,32 @@ export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailMo
             </View>
           )}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Link</Text>
-            <Text style={styles.urlText}>{workout.url}</Text>
-          </View>
+          {!isPhoto && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Link</Text>
+              <Text style={styles.urlText}>{workout.url}</Text>
+            </View>
+          )}
+
+          {workout.exercises && workout.exercises.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Exercises</Text>
+              {workout.exercises.map((ex, i) => (
+                <View key={i} style={styles.exerciseRow}>
+                  <Text style={styles.exerciseName}>{ex.name}</Text>
+                  <Text style={styles.exerciseMeta}>
+                    {[
+                      ex.sets ? `${ex.sets} sets` : null,
+                      ex.reps ? `${ex.reps} reps` : null,
+                      ex.weight ?? null,
+                      ex.duration ?? null,
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                  {ex.notes ? <Text style={styles.exerciseNotes}>{ex.notes}</Text> : null}
+                </View>
+              ))}
+            </View>
+          )}
 
           {workout.notes.trim().length > 0 && (
             <View style={styles.section}>
@@ -165,6 +196,32 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  thumbnailHero: {
+    width: '100%',
+    height: 200,
+    borderRadius: 14,
+  },
+  exerciseRow: {
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.separator,
+  },
+  exerciseName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  exerciseMeta: {
+    fontSize: 13,
+    color: COLORS.secondaryText,
+    marginTop: 2,
+  },
+  exerciseNotes: {
+    fontSize: 13,
+    color: COLORS.secondaryText,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   title: {
     fontSize: 20,
