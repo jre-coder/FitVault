@@ -2,33 +2,66 @@
 
 ## What This App Does
 
-FitVault is a cross-platform mobile app (React Native + Expo + TypeScript) that lets users save, organize, and discover workout content from external sources (YouTube, Instagram, TikTok, websites).
+FitVault is a cross-platform mobile app (React Native + Expo + TypeScript) that lets users save, organize, discover, and execute workout content from external sources (YouTube, Instagram, TikTok, websites) and photos.
 
 Core features:
-- **My Workouts** — save and manage workout links, tagged by body part and source
+- **My Workouts** — save and manage workout links/photos, tagged by body part and source
 - **Browse** — filter saved workouts by category
 - **Discover** — AI-powered suggestions for top workouts by body part (premium)
+- **Plan** — build routines from saved workouts, schedule them on a weekly grid, execute guided workout sessions with timers and set logging
+- **Activity** — streak tracker, weekly stats, and full session history
 - **For You** — personalized AI recommendations based on user goals, fitness level, equipment, and duration (premium)
 
-AI features are powered by the Claude API (`mobile/services/claudeService.ts`). Subscriptions gate premium features — currently mocked, ready for `react-native-iap` or RevenueCat wiring (`mobile/context/SubscriptionContext.tsx`).
-
-The original native iOS implementation (SwiftUI + SwiftData) is preserved in `FitVault/` and `FitVault.xcodeproj` for reference.
+AI features are powered by the Claude API (`mobile/services/claudeService.ts`, `mobile/services/photoAnalysisService.ts`). Subscriptions gate premium features — currently mocked, ready for `react-native-iap` or RevenueCat wiring (`mobile/context/SubscriptionContext.tsx`).
 
 ---
 
 ## Current Priorities
 
-> Update this section as focus shifts.
+### 🔴 AI Caching Layer (No caching exists — high cost risk)
 
-- [ ] TBD — ask the user what's actively being worked on
+An audit of all Claude API calls found **zero caching** at any layer. Every user action that touches AI triggers a fresh API call. This must be addressed before scaling to real users.
+
+**Identified gaps by feature:**
+
+#### 1. Discover Tab — `fetchTopWorkouts` / `fetchSimilarWorkouts`
+- **Gap:** Body part + platform + workout type combinations produce identical results on repeat queries, but every "Find" button tap calls the API fresh.
+- **Fix needed:** Cache results in AsyncStorage keyed on a hash of `{bodyPart, platforms, workoutTypes}`. TTL: 24 hours (results don't change day-to-day).
+- **Estimated savings:** 80–95% reduction in Discover API calls for active users.
+
+#### 2. For You Tab — `fetchRecommendations`
+- **Gap:** User profile (goals, fitness level, equipment, duration, platforms, type) rarely changes between sessions, but recommendations are re-fetched every time the user taps "Get My Recommendations."
+- **Fix needed:** Cache last recommendations keyed on a hash of the full user profile object. Invalidate only when the profile changes. TTL: 7 days.
+- **Estimated savings:** Eliminates redundant calls for users who don't change their profile between sessions.
+
+#### 3. Photo Analysis — `analyzeWorkoutPhotos`
+- **Gap:** Most expensive call (image tokens). If a user imports the same photo twice (re-picks, re-opens, upgrades after picking), it re-analyzes.
+- **Fix needed:** After successful analysis, store result in `workoutItem.exercises` on save (already done for saved workouts). For the import flow: cache in-memory within the modal session so upgrade → auto-analysis doesn't re-send images already analyzed. Long-term: hash image content and cache to AsyncStorage.
+- **Estimated savings:** Eliminates duplicate calls on the same image content.
+
+#### 4. Claude API Prompt Caching (all calls)
+- **Gap:** System prompts are sent fresh on every request. No `cache_control` headers are used.
+- **Fix needed:** Add `cache_control: { type: "ephemeral" }` to the `system` block in all three service functions. System prompts are 450–880 chars — borderline for the 1024-token minimum. Consider padding them with format documentation to cross the threshold.
+- **Estimated savings:** 90% token cost reduction on the system prompt portion of every call.
+
+#### 5. Backend Proxy (security + monitoring)
+- **Gap:** API key is in `EXPO_PUBLIC_CLAUDE_API_KEY` — a public env var readable by anyone who extracts the app bundle. There is no rate limiting or usage monitoring per user.
+- **Fix needed (pre-launch):** Move all Claude API calls behind a backend proxy (e.g., Supabase Edge Function, Cloudflare Worker, or simple Express endpoint). The proxy holds the real key, enforces per-user rate limits, and logs usage for cost tracking.
+- **Priority:** Must be done before App Store release.
+
+**Implementation order:**
+1. Prompt caching (`cache_control` headers) — 1 hour, immediate savings
+2. Discover results caching (AsyncStorage + hash key + TTL) — highest call frequency
+3. For You results caching (profile-keyed) — most expensive per-call
+4. Backend proxy — required before production release
 
 ---
 
 ## Do NOT Touch
 
 - **`mobile/.env` / `mobile/.env.local`** — never commit; contains real API keys
-- **`mobile/android/` / `mobile/ios/`** — generated by `expo prebuild`; do not hand-edit
-- **`mobile/context/SubscriptionContext.tsx` product IDs** — `com.fitvault.app.premium.monthly` / `com.fitvault.app.premium.yearly` must match store configurations exactly when real IAP is wired
+- **`mobile/android/` / `mobile/ios/`** — generated by `expo prebuild`; do not hand-edit (exception: `ios/FitVault/Info.plist` for permission strings)
+- **`mobile/context/SubscriptionContext.tsx` product IDs** — must match store configurations exactly when real IAP is wired
 - **`mobile/types/index.ts`** — shared contract; coordinate any changes across all consumers
 - **`.gitignore`** — do not remove entries; do not add `.env` or secrets files
 - **Global git config or SSH keys** — never modify
@@ -40,12 +73,14 @@ The original native iOS implementation (SwiftUI + SwiftData) is preserved in `Fi
 
 | Layer | Technology |
 |---|---|
-| UI | React Native + Expo SDK 52 |
+| UI | React Native + Expo SDK 55 |
 | Navigation | Expo Router v4 (file-based) |
 | Persistence | AsyncStorage (JSON) |
-| AI | Claude API (direct HTTPS, client-side key — move to backend for production) |
+| AI | Claude API — `claude-haiku-4-5` (direct HTTPS, client-side key — move to backend proxy before release) |
 | Subscriptions | Mocked context — wire `react-native-iap` or RevenueCat for production |
-| Platform | iOS + Android (cross-platform) |
+| Platform | iOS-first (simulator: iPhone 17 Pro); Android untested |
+| Build | Local: `npx expo run:ios` · Cloud: EAS (preview + production) |
+| Tests | Jest + React Native Testing Library (222 tests, enforced via pre-commit hook + CI) |
 
 ---
 
@@ -54,13 +89,28 @@ The original native iOS implementation (SwiftUI + SwiftData) is preserved in `Fi
 | File | Purpose |
 |---|---|
 | `mobile/app/_layout.tsx` | Root layout, context providers |
-| `mobile/app/(tabs)/_layout.tsx` | Tab bar configuration |
-| `mobile/types/index.ts` | Shared TypeScript types |
+| `mobile/app/(tabs)/_layout.tsx` | Tab bar configuration (6 tabs) |
+| `mobile/app/(tabs)/index.tsx` | My Workouts tab |
+| `mobile/app/(tabs)/browse.tsx` | Browse/filter tab |
+| `mobile/app/(tabs)/discover.tsx` | AI discovery tab (premium) |
+| `mobile/app/(tabs)/plan.tsx` | Weekly plan + routine execution |
+| `mobile/app/(tabs)/history.tsx` | Activity log + streak stats |
+| `mobile/app/(tabs)/for-you.tsx` | Personalized AI recommendations (premium) |
+| `mobile/types/index.ts` | All shared TypeScript types |
 | `mobile/constants/index.ts` | Colors, icons, body parts, source types |
-| `mobile/services/claudeService.ts` | Claude API calls |
-| `mobile/services/storage.ts` | AsyncStorage wrapper |
+| `mobile/services/claudeService.ts` | Discover + For You Claude API calls |
+| `mobile/services/photoAnalysisService.ts` | Photo → workout analysis (Claude Vision) |
+| `mobile/services/storage.ts` | Saved workouts AsyncStorage wrapper |
+| `mobile/services/routineStorage.ts` | Routines + weekly schedule persistence |
+| `mobile/services/workoutLogStorage.ts` | Completed session log persistence |
 | `mobile/context/WorkoutContext.tsx` | Workout CRUD + persistence |
+| `mobile/context/RoutineContext.tsx` | Routine + weekly schedule state |
+| `mobile/context/WorkoutLogContext.tsx` | Activity log + computed stats (streak, weekly totals) |
 | `mobile/context/SubscriptionContext.tsx` | Premium status (mock IAP) |
+| `mobile/hooks/useWorkoutTimer.ts` | Stopwatch + rest countdown for execution mode |
+| `mobile/components/WorkoutExecutionModal.tsx` | Guided workout execution UI |
+| `mobile/components/RoutineBuilderModal.tsx` | Build/edit routines |
+| `mobile/components/PhotoImportModal.tsx` | Photo import + AI analysis |
 | `mobile/.env.example` | Required env var template |
 
 ---
@@ -71,5 +121,6 @@ The original native iOS implementation (SwiftUI + SwiftData) is preserved in `Fi
 cd mobile
 cp .env.example .env.local   # add real Claude API key
 npm install
-npx expo start
+npx expo run:ios
+npm test
 ```
