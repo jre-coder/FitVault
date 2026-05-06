@@ -442,3 +442,71 @@ describe('Discover results caching — fetchSimilarWorkouts', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 })
+
+// ─── For You results caching ──────────────────────────────────────────────────
+
+describe('For You results caching — fetchRecommendations', () => {
+  const baseParams = {
+    goals: 'lose weight',
+    fitnessLevel: 'Beginner',
+    equipment: ['Bodyweight'],
+    durationMinutes: 30,
+    platforms: ['youtube'],
+    workoutTypes: ['any'],
+  }
+
+  it('calls the API on a cache miss and stores the result', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchRecommendations(baseParams)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockSetItem).toHaveBeenCalled()
+  })
+
+  it('returns cached results without calling the API when profile is unchanged', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation({ title: 'ForYou Cached' })]))
+    await fetchRecommendations(baseParams)
+    mockFetch.mockReset()
+
+    const results = await fetchRecommendations(baseParams)
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(results[0].title).toBe('ForYou Cached')
+  })
+
+  it('makes a new API call when goals text changes', async () => {
+    mockFetch.mockResolvedValue(makeApiResponse([makeRecommendation()]))
+    await fetchRecommendations(baseParams)
+    await fetchRecommendations({ ...baseParams, goals: 'build muscle' })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('makes a new API call when fitness level changes', async () => {
+    mockFetch.mockResolvedValue(makeApiResponse([makeRecommendation()]))
+    await fetchRecommendations(baseParams)
+    await fetchRecommendations({ ...baseParams, fitnessLevel: 'Advanced' })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('makes a new API call when equipment changes', async () => {
+    mockFetch.mockResolvedValue(makeApiResponse([makeRecommendation()]))
+    await fetchRecommendations(baseParams)
+    await fetchRecommendations({ ...baseParams, equipment: ['Dumbbells', 'Barbell'] })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('makes a new API call when duration changes', async () => {
+    mockFetch.mockResolvedValue(makeApiResponse([makeRecommendation()]))
+    await fetchRecommendations(baseParams)
+    await fetchRecommendations({ ...baseParams, durationMinutes: 60 })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats array-order differences as the same cache key', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation({ title: 'Order Test' })]))
+    await fetchRecommendations({ ...baseParams, equipment: ['Dumbbells', 'Bodyweight'] })
+    mockFetch.mockReset()
+
+    const results = await fetchRecommendations({ ...baseParams, equipment: ['Bodyweight', 'Dumbbells'] })
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(results[0].title).toBe('Order Test')
+  })
+})

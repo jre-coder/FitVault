@@ -28,9 +28,8 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 - **Implemented:** Results cached in AsyncStorage via `aiResultCache.ts`, keyed on a stable hash of `{bodyPart, platforms, workoutTypes}` (for top workouts) or `{workoutId, platforms, workoutTypes}` (for similar workouts). TTL: 24 hours.
 - **Estimated savings:** 80–95% reduction in Discover API calls for active users.
 
-#### 2. For You Tab — `fetchRecommendations`
-- **Gap:** User profile (goals, fitness level, equipment, duration, platforms, type) rarely changes between sessions, but recommendations are re-fetched every time the user taps "Get My Recommendations."
-- **Fix needed:** Cache last recommendations keyed on a hash of the full user profile object. Invalidate only when the profile changes. TTL: 7 days. Use `getCachedResults` / `setCachedResults` from `aiResultCache.ts` with `TTL_7D`.
+#### 2. ✅ For You Tab — `fetchRecommendations`
+- **Implemented:** Results cached in AsyncStorage via `aiResultCache.ts`, keyed on a stable hash of all profile params `{goals, fitnessLevel, equipment, durationMinutes, platforms, workoutTypes}`. TTL: 7 days. Invalidates automatically when any profile field changes.
 - **Estimated savings:** Eliminates redundant calls for users who don't change their profile between sessions.
 
 #### 3. Photo Analysis — `analyzeWorkoutPhotos`
@@ -50,7 +49,7 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 **Remaining implementation order:**
 1. ~~Prompt caching~~ ✅ done
 2. ~~Discover results caching~~ ✅ done
-3. For You results caching (profile-keyed, `TTL_7D`) — next up
+3. ~~For You results caching~~ ✅ done
 4. Backend proxy — required before production release
 
 ---
@@ -78,7 +77,7 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 | Subscriptions | Mocked context — wire `react-native-iap` or RevenueCat for production |
 | Platform | iOS-first (simulator: iPhone 17 Pro); Android untested |
 | Build | Local: `npx expo run:ios` · Cloud: EAS (preview + production) |
-| Tests | Jest + React Native Testing Library (252 tests, enforced via pre-commit hook + CI) |
+| Tests | Jest + React Native Testing Library (259 tests, enforced via pre-commit hook + CI) |
 
 ---
 

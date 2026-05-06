@@ -1,7 +1,7 @@
 // WARNING: Never ship API keys in production client code. Use a backend proxy.
 import { AIWorkoutSuggestion, BodyPart, WorkoutItem } from '../types'
 import { CLAUDE_API_URL, CLAUDE_MODEL } from '../constants'
-import { getCachedResults, setCachedResults, hashParams, TTL_24H } from './aiResultCache'
+import { getCachedResults, setCachedResults, hashParams, TTL_24H, TTL_7D } from './aiResultCache'
 
 const API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY ?? ''
 
@@ -255,6 +255,10 @@ export async function fetchRecommendations(params: {
   platforms: string[]
   workoutTypes: string[]
 }): Promise<AIWorkoutSuggestion[]> {
+  const cacheKey = hashParams(params)
+  const cached = await getCachedResults<AIWorkoutSuggestion[]>(cacheKey)
+  if (cached) return cached
+
   const typeFilter = workoutTypeFilter(params.workoutTypes)
   const prompt = `Recommend 5 personalized workouts from well-known, popular creators based on:
 Goals: ${params.goals}
@@ -262,7 +266,9 @@ Fitness Level: ${params.fitnessLevel}
 Available Equipment: ${params.equipment.join(', ')}
 Session Duration: ${params.durationMinutes} minutes
 IMPORTANT: You MUST only recommend content from these platforms: ${params.platforms.join(', ')}. Every recommendation's platform field MUST be one of: ${params.platforms.join(', ')}.${typeFilter ? `\n${typeFilter}` : ''}`
-  return callClaude(prompt, params.platforms)
+  const results = await callClaude(prompt, params.platforms)
+  await setCachedResults(cacheKey, results, TTL_7D)
+  return results
 }
 
 export function safeURL(s: AIWorkoutSuggestion): string {
