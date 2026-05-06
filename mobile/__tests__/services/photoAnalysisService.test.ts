@@ -85,3 +85,37 @@ describe('analyzeWorkoutPhotos', () => {
     expect(result.exercises[0]).toHaveProperty('name')
   })
 })
+
+// ─── prompt caching ───────────────────────────────────────────────────────────
+
+describe('prompt caching', () => {
+  it('sends analysis instructions as a cached system block', async () => {
+    mockSuccess(MOCK_RESULT)
+    await analyzeWorkoutPhotos(['base64data=='])
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(Array.isArray(body.system)).toBe(true)
+    expect(body.system[0]).toMatchObject({
+      type: 'text',
+      cache_control: { type: 'ephemeral' },
+    })
+    expect(body.system[0].text.length).toBeGreaterThan(100)
+  })
+
+  it('includes anthropic-beta prompt-caching header', async () => {
+    mockSuccess(MOCK_RESULT)
+    await analyzeWorkoutPhotos(['base64data=='])
+
+    const headers = mockFetch.mock.calls[0][1].headers
+    expect(headers['anthropic-beta']).toBe('prompt-caching-2024-07-31')
+  })
+
+  it('still sends images in the user message after system-prompt refactor', async () => {
+    mockSuccess(MOCK_RESULT)
+    await analyzeWorkoutPhotos(['img1==', 'img2=='])
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    const imageBlocks = body.messages[0].content.filter((c: any) => c.type === 'image')
+    expect(imageBlocks).toHaveLength(2)
+  })
+})

@@ -233,6 +233,64 @@ describe('fetchRecommendations', () => {
   })
 })
 
+// ─── prompt caching ──────────────────────────────────────────────────────────
+
+describe('prompt caching', () => {
+  it('sends system prompt as a cached content block on fetchTopWorkouts', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Legs', ['youtube'], ['any'])
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(Array.isArray(body.system)).toBe(true)
+    expect(body.system[0]).toMatchObject({
+      type: 'text',
+      cache_control: { type: 'ephemeral' },
+    })
+    expect(body.system[0].text.length).toBeGreaterThan(100)
+  })
+
+  it('includes anthropic-beta prompt-caching header on fetchTopWorkouts', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Chest', ['youtube'], ['any'])
+
+    const headers = mockFetch.mock.calls[0][1].headers
+    expect(headers['anthropic-beta']).toBe('prompt-caching-2024-07-31')
+  })
+
+  it('applies caching on fetchSimilarWorkouts', async () => {
+    const workout: WorkoutItem = {
+      id: '1', title: 'Test', url: 'https://youtube.com', sourceType: 'youtube',
+      bodyParts: ['Legs'], notes: '', dateAdded: '2026-01-01', isFavorite: false,
+    }
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchSimilarWorkouts(workout, ['youtube'], ['any'])
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.system[0]).toMatchObject({ type: 'text', cache_control: { type: 'ephemeral' } })
+  })
+
+  it('applies caching on fetchRecommendations', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchRecommendations({
+      goals: 'lose weight', fitnessLevel: 'Beginner', equipment: ['Bodyweight'],
+      durationMinutes: 30, platforms: ['youtube'], workoutTypes: ['any'],
+    })
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.system[0]).toMatchObject({ type: 'text', cache_control: { type: 'ephemeral' } })
+  })
+
+  it('sends request-specific content in the user message', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Shoulders', ['youtube'], ['any'])
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+    expect(body.messages[0].role).toBe('user')
+    expect(typeof body.messages[0].content).toBe('string')
+    expect(body.messages[0].content).toContain('Shoulders')
+  })
+})
+
 // ─── safeURL ─────────────────────────────────────────────────────────────────
 
 describe('safeURL', () => {
