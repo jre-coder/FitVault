@@ -1,6 +1,7 @@
 // WARNING: Never ship API keys in production client code. Use a backend proxy.
 import { AIWorkoutSuggestion, BodyPart, WorkoutItem } from '../types'
 import { CLAUDE_API_URL, CLAUDE_MODEL } from '../constants'
+import { getCachedResults, setCachedResults, hashParams, TTL_24H } from './aiResultCache'
 
 const API_KEY = process.env.EXPO_PUBLIC_CLAUDE_API_KEY ?? ''
 
@@ -218,20 +219,32 @@ function workoutTypeFilter(workoutTypes: string[]): string {
 }
 
 export async function fetchTopWorkouts(bodyPart: BodyPart, platforms: string[], workoutTypes: string[]): Promise<AIWorkoutSuggestion[]> {
+  const cacheKey = hashParams({ bodyPart, platforms, workoutTypes })
+  const cached = await getCachedResults<AIWorkoutSuggestion[]>(cacheKey)
+  if (cached) return cached
+
   const typeFilter = workoutTypeFilter(workoutTypes)
   const prompt = `Recommend the 5 best ${bodyPart} workout videos or resources from well-known, popular creators with large followings.
 IMPORTANT: You MUST only recommend content from these platforms: ${platforms.join(', ')}. Every recommendation's platform field MUST be one of: ${platforms.join(', ')}.${typeFilter ? `\n${typeFilter}` : ''}`
-  return callClaude(prompt, platforms)
+  const results = await callClaude(prompt, platforms)
+  await setCachedResults(cacheKey, results, TTL_24H)
+  return results
 }
 
 export async function fetchSimilarWorkouts(workout: WorkoutItem, platforms: string[], workoutTypes: string[]): Promise<AIWorkoutSuggestion[]> {
+  const cacheKey = hashParams({ workoutId: workout.id, platforms, workoutTypes })
+  const cached = await getCachedResults<AIWorkoutSuggestion[]>(cacheKey)
+  if (cached) return cached
+
   const typeFilter = workoutTypeFilter(workoutTypes)
   const prompt = `Find 5 popular workouts from well-known creators similar to this one:
 Title: ${workout.title}
 Body Parts: ${workout.bodyParts.join(', ')}
 Notes: ${workout.notes}
 IMPORTANT: You MUST only recommend content from these platforms: ${platforms.join(', ')}. Every recommendation's platform field MUST be one of: ${platforms.join(', ')}.${typeFilter ? `\n${typeFilter}` : ''}`
-  return callClaude(prompt, platforms)
+  const results = await callClaude(prompt, platforms)
+  await setCachedResults(cacheKey, results, TTL_24H)
+  return results
 }
 
 export async function fetchRecommendations(params: {

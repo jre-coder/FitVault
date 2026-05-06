@@ -18,30 +18,28 @@ AI features are powered by the Claude API (`mobile/services/claudeService.ts`, `
 
 ## Current Priorities
 
-### 🔴 AI Caching Layer (No caching exists — high cost risk)
+### 🟡 AI Caching Layer (partially complete — backend proxy still required)
 
-An audit of all Claude API calls found **zero caching** at any layer. Every user action that touches AI triggers a fresh API call. This must be addressed before scaling to real users.
+An audit of all Claude API calls found **zero caching** at any layer. The following fixes have been applied or are still pending.
 
-**Identified gaps by feature:**
+**Status by item:**
 
-#### 1. Discover Tab — `fetchTopWorkouts` / `fetchSimilarWorkouts`
-- **Gap:** Body part + platform + workout type combinations produce identical results on repeat queries, but every "Find" button tap calls the API fresh.
-- **Fix needed:** Cache results in AsyncStorage keyed on a hash of `{bodyPart, platforms, workoutTypes}`. TTL: 24 hours (results don't change day-to-day).
+#### 1. ✅ Discover Tab — `fetchTopWorkouts` / `fetchSimilarWorkouts`
+- **Implemented:** Results cached in AsyncStorage via `aiResultCache.ts`, keyed on a stable hash of `{bodyPart, platforms, workoutTypes}` (for top workouts) or `{workoutId, platforms, workoutTypes}` (for similar workouts). TTL: 24 hours.
 - **Estimated savings:** 80–95% reduction in Discover API calls for active users.
 
 #### 2. For You Tab — `fetchRecommendations`
 - **Gap:** User profile (goals, fitness level, equipment, duration, platforms, type) rarely changes between sessions, but recommendations are re-fetched every time the user taps "Get My Recommendations."
-- **Fix needed:** Cache last recommendations keyed on a hash of the full user profile object. Invalidate only when the profile changes. TTL: 7 days.
+- **Fix needed:** Cache last recommendations keyed on a hash of the full user profile object. Invalidate only when the profile changes. TTL: 7 days. Use `getCachedResults` / `setCachedResults` from `aiResultCache.ts` with `TTL_7D`.
 - **Estimated savings:** Eliminates redundant calls for users who don't change their profile between sessions.
 
 #### 3. Photo Analysis — `analyzeWorkoutPhotos`
 - **Gap:** Most expensive call (image tokens). If a user imports the same photo twice (re-picks, re-opens, upgrades after picking), it re-analyzes.
-- **Fix needed:** After successful analysis, store result in `workoutItem.exercises` on save (already done for saved workouts). For the import flow: cache in-memory within the modal session so upgrade → auto-analysis doesn't re-send images already analyzed. Long-term: hash image content and cache to AsyncStorage.
+- **Fix needed:** For the import flow: cache in-memory within the modal session so upgrade → auto-analysis doesn't re-send images already analyzed. Long-term: hash image content and cache to AsyncStorage.
 - **Estimated savings:** Eliminates duplicate calls on the same image content.
 
-#### 4. Claude API Prompt Caching (all calls)
-- **Gap:** System prompts are sent fresh on every request. No `cache_control` headers are used.
-- **Fix needed:** Add `cache_control: { type: "ephemeral" }` to the `system` block in all three service functions. System prompts are 450–880 chars — borderline for the 1024-token minimum. Consider padding them with format documentation to cross the threshold.
+#### 4. ✅ Claude API Prompt Caching (all calls)
+- **Implemented:** `cache_control: { type: "ephemeral" }` added to the `system` block in both `claudeService.ts` and `photoAnalysisService.ts`. System prompts expanded to exceed the 2048-token Haiku minimum. `anthropic-beta: prompt-caching-2024-07-31` header added to all requests.
 - **Estimated savings:** 90% token cost reduction on the system prompt portion of every call.
 
 #### 5. Backend Proxy (security + monitoring)
@@ -49,10 +47,10 @@ An audit of all Claude API calls found **zero caching** at any layer. Every user
 - **Fix needed (pre-launch):** Move all Claude API calls behind a backend proxy (e.g., Supabase Edge Function, Cloudflare Worker, or simple Express endpoint). The proxy holds the real key, enforces per-user rate limits, and logs usage for cost tracking.
 - **Priority:** Must be done before App Store release.
 
-**Implementation order:**
-1. Prompt caching (`cache_control` headers) — 1 hour, immediate savings
-2. Discover results caching (AsyncStorage + hash key + TTL) — highest call frequency
-3. For You results caching (profile-keyed) — most expensive per-call
+**Remaining implementation order:**
+1. ~~Prompt caching~~ ✅ done
+2. ~~Discover results caching~~ ✅ done
+3. For You results caching (profile-keyed, `TTL_7D`) — next up
 4. Backend proxy — required before production release
 
 ---
@@ -80,7 +78,7 @@ An audit of all Claude API calls found **zero caching** at any layer. Every user
 | Subscriptions | Mocked context — wire `react-native-iap` or RevenueCat for production |
 | Platform | iOS-first (simulator: iPhone 17 Pro); Android untested |
 | Build | Local: `npx expo run:ios` · Cloud: EAS (preview + production) |
-| Tests | Jest + React Native Testing Library (222 tests, enforced via pre-commit hook + CI) |
+| Tests | Jest + React Native Testing Library (252 tests, enforced via pre-commit hook + CI) |
 
 ---
 
@@ -98,8 +96,9 @@ An audit of all Claude API calls found **zero caching** at any layer. Every user
 | `mobile/app/(tabs)/for-you.tsx` | Personalized AI recommendations (premium) |
 | `mobile/types/index.ts` | All shared TypeScript types |
 | `mobile/constants/index.ts` | Colors, icons, body parts, source types |
-| `mobile/services/claudeService.ts` | Discover + For You Claude API calls |
-| `mobile/services/photoAnalysisService.ts` | Photo → workout analysis (Claude Vision) |
+| `mobile/services/claudeService.ts` | Discover + For You Claude API calls (with prompt caching + result caching) |
+| `mobile/services/photoAnalysisService.ts` | Photo → workout analysis (Claude Vision, with prompt caching) |
+| `mobile/services/aiResultCache.ts` | AsyncStorage result cache — `getCachedResults`, `setCachedResults`, `hashParams`, `TTL_24H`, `TTL_7D` |
 | `mobile/services/storage.ts` | Saved workouts AsyncStorage wrapper |
 | `mobile/services/routineStorage.ts` | Routines + weekly schedule persistence |
 | `mobile/services/workoutLogStorage.ts` | Completed session log persistence |

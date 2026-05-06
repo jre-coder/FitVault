@@ -6,9 +6,27 @@ import {
   suggestionToWorkoutItem,
 } from '../../services/claudeService'
 import { AIWorkoutSuggestion, WorkoutItem } from '../../types'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 const mockFetch = jest.fn()
 global.fetch = mockFetch
+
+// In-memory store so getCachedResults / setCachedResults work across tests
+const store: Record<string, string | undefined> = {}
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn((key: string) => Promise.resolve(store[key] ?? null)),
+  setItem: jest.fn((key: string, value: string) => {
+    store[key] = value
+    return Promise.resolve()
+  }),
+  removeItem: jest.fn((key: string) => {
+    delete store[key]
+    return Promise.resolve()
+  }),
+}))
+
+const mockSetItem = AsyncStorage.setItem as jest.Mock
 
 function makeApiResponse(recommendations: object[]): Response {
   return {
@@ -37,6 +55,10 @@ function makeRecommendation(overrides: Partial<AIWorkoutSuggestion> = {}): objec
 
 beforeEach(() => {
   mockFetch.mockReset()
+  for (const key of Object.keys(store)) delete store[key]
+  jest.clearAllMocks()
+  // Re-attach fetch after clearAllMocks so it stays as the global mock
+  global.fetch = mockFetch
 })
 
 // ─── URL generation ──────────────────────────────────────────────────────────
@@ -344,5 +366,79 @@ describe('suggestionToWorkoutItem', () => {
       durationMinutes: 20, difficulty: 'Intermediate',
     }
     expect(suggestionToWorkoutItem(suggestion).sourceType).toBe('other')
+  })
+})
+
+// ─── Discover results caching ─────────────────────────────────────────────────
+
+describe('Discover results caching — fetchTopWorkouts', () => {
+  it('calls the API on a cache miss and stores the result', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    const results = await fetchTopWorkouts('Legs', ['youtube'], ['any'])
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(results).toHaveLength(1)
+    expect(mockSetItem).toHaveBeenCalled()
+  })
+
+  it('returns cached results without calling the API on a cache hit', async () => {
+    // First call populates cache
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation({ title: 'Cached Workout' })]))
+    await fetchTopWorkouts('Chest', ['youtube'], ['any'])
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    mockFetch.mockReset()
+
+    // Second call with same params must hit cache, not API
+    const results = await fetchTopWorkouts('Chest', ['youtube'], ['any'])
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(results[0].title).toBe('Cached Workout')
+  })
+
+  it('makes a new API call when params differ from the cached entry', async () => {
+    mockFetch.mockResolvedValue(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Arms', ['youtube'], ['any'])
+    await fetchTopWorkouts('Back', ['youtube'], ['any'])
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats platform-order differences as the same cache key', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation({ title: 'Order Test' })]))
+    await fetchTopWorkouts('Core', ['youtube', 'tiktok'], ['any'])
+    mockFetch.mockReset()
+
+    const results = await fetchTopWorkouts('Core', ['tiktok', 'youtube'], ['any'])
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(results[0].title).toBe('Order Test')
+  })
+})
+
+describe('Discover results caching — fetchSimilarWorkouts', () => {
+  const workout: WorkoutItem = {
+    id: 'w-1', title: 'My Leg Day', url: 'https://youtube.com/watch?v=test',
+    sourceType: 'youtube', bodyParts: ['Legs'], notes: '', dateAdded: '2026-01-01', isFavorite: false,
+  }
+
+  it('calls the API on a cache miss and stores the result', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchSimilarWorkouts(workout, ['youtube'], ['any'])
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockSetItem).toHaveBeenCalled()
+  })
+
+  it('returns cached results on a second call for the same workout', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation({ title: 'Similar Cached' })]))
+    await fetchSimilarWorkouts(workout, ['youtube'], ['any'])
+    mockFetch.mockReset()
+
+    const results = await fetchSimilarWorkouts(workout, ['youtube'], ['any'])
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(results[0].title).toBe('Similar Cached')
+  })
+
+  it('makes a new API call for a different workout id', async () => {
+    const otherWorkout = { ...workout, id: 'w-2', title: 'Push Day' }
+    mockFetch.mockResolvedValue(makeApiResponse([makeRecommendation()]))
+    await fetchSimilarWorkouts(workout, ['youtube'], ['any'])
+    await fetchSimilarWorkouts(otherWorkout, ['youtube'], ['any'])
+    expect(mockFetch).toHaveBeenCalledTimes(2)
   })
 })
