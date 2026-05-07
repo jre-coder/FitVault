@@ -17,7 +17,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { COLORS, WORKOUT_TYPES } from '../../constants'
 import { useSubscription } from '../../context/SubscriptionContext'
 import { useWorkouts } from '../../context/WorkoutContext'
-import { AIWorkoutSuggestion, FitnessLevel, WorkoutItem } from '../../types'
+import { useProfile } from '../../context/ProfileContext'
+import { AIWorkoutSuggestion, FitnessLevel, GOAL_OPTIONS, SENSITIVE_AREA_OPTIONS, WorkoutItem } from '../../types'
 import { fetchRecommendations, suggestionToWorkoutItem } from '../../services/claudeService'
 import LockedView from '../../components/LockedView'
 import PaywallModal from '../../components/PaywallModal'
@@ -46,56 +47,88 @@ const DURATION_OPTIONS = [15, 30, 45, 60, 75, 90]
 
 function ForYouContent() {
   const { addWorkout } = useWorkouts()
-  const [goals, setGoals] = useState('')
-  const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel>('Intermediate')
-  const [durationMinutes, setDurationMinutes] = useState(30)
-  const [selectedEquipment, setSelectedEquipment] = useState<string[]>(['Bodyweight'])
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['youtube'])
-  const [selectedWorkoutTypes, setSelectedWorkoutTypes] = useState<string[]>(['any'])
+  const { profile, updateProfile } = useProfile()
 
-  const handleTogglePlatform = useCallback((id: string) => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(id)
-        ? prev.length > 1 ? prev.filter((p) => p !== id) : prev
-        : [...prev, id],
-    )
-  }, [])
+  // Local UI state — not persisted
+  const [profileExpanded, setProfileExpanded] = useState(false)
+  const [showSensitiveAreas, setShowSensitiveAreas] = useState(false)
+  const [ageText, setAgeText] = useState(profile.age != null ? String(profile.age) : '')
 
-  const handleToggleWorkoutType = useCallback((id: string) => {
-    if (id === 'any') {
-      setSelectedWorkoutTypes(['any'])
-      return
-    }
-    setSelectedWorkoutTypes((prev) => {
-      const without = prev.filter((t) => t !== 'any' && t !== id)
-      const result = prev.includes(id) ? without : [...without, id]
-      return result.length === 0 ? ['any'] : result
-    })
-  }, [])
   const [results, setResults] = useState<AIWorkoutSuggestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedResult, setSelectedResult] = useState<AIWorkoutSuggestion | null>(null)
 
+  const isProfileSectionOpen = profileExpanded || profile.goals.length === 0
+
+  // ─── Profile handlers ──────────────────────────────────────────────────────
+
+  const handleToggleGoal = useCallback((goal: string) => {
+    updateProfile({
+      goals: profile.goals.includes(goal)
+        ? profile.goals.filter(g => g !== goal)
+        : [...profile.goals, goal],
+    })
+  }, [profile.goals, updateProfile])
+
+  const handleSetFitnessLevel = useCallback((level: FitnessLevel) => {
+    updateProfile({ fitnessLevel: level })
+  }, [updateProfile])
+
+  function handleAgeCommit() {
+    const n = parseInt(ageText, 10)
+    updateProfile({ age: isNaN(n) || n <= 0 ? undefined : n })
+  }
+
+  const handleToggleSensitiveArea = useCallback((area: string) => {
+    updateProfile({
+      sensitiveAreas: profile.sensitiveAreas.includes(area)
+        ? profile.sensitiveAreas.filter(a => a !== area)
+        : [...profile.sensitiveAreas, area],
+    })
+  }, [profile.sensitiveAreas, updateProfile])
+
+  // ─── Preferences handlers ─────────────────────────────────────────────────
+
   const handleToggleEquipment = useCallback((item: string) => {
-    setSelectedEquipment((prev) =>
-      prev.includes(item) ? prev.filter((e) => e !== item) : [...prev, item],
-    )
-  }, [])
+    updateProfile({
+      equipment: profile.equipment.includes(item)
+        ? profile.equipment.filter(e => e !== item)
+        : [...profile.equipment, item],
+    })
+  }, [profile.equipment, updateProfile])
 
   const handleDecreaseDuration = useCallback(() => {
-    setDurationMinutes((prev) => {
-      const idx = DURATION_OPTIONS.indexOf(prev)
-      return idx > 0 ? DURATION_OPTIONS[idx - 1] : prev
-    })
-  }, [])
+    const idx = DURATION_OPTIONS.indexOf(profile.preferredDuration)
+    if (idx > 0) updateProfile({ preferredDuration: DURATION_OPTIONS[idx - 1] })
+  }, [profile.preferredDuration, updateProfile])
 
   const handleIncreaseDuration = useCallback(() => {
-    setDurationMinutes((prev) => {
-      const idx = DURATION_OPTIONS.indexOf(prev)
-      return idx < DURATION_OPTIONS.length - 1 ? DURATION_OPTIONS[idx + 1] : prev
+    const idx = DURATION_OPTIONS.indexOf(profile.preferredDuration)
+    if (idx < DURATION_OPTIONS.length - 1) updateProfile({ preferredDuration: DURATION_OPTIONS[idx + 1] })
+  }, [profile.preferredDuration, updateProfile])
+
+  const handleTogglePlatform = useCallback((id: string) => {
+    updateProfile({
+      preferredPlatforms: profile.preferredPlatforms.includes(id)
+        ? profile.preferredPlatforms.length > 1
+          ? profile.preferredPlatforms.filter(p => p !== id)
+          : profile.preferredPlatforms
+        : [...profile.preferredPlatforms, id],
     })
-  }, [])
+  }, [profile.preferredPlatforms, updateProfile])
+
+  const handleToggleWorkoutType = useCallback((id: string) => {
+    if (id === 'any') {
+      updateProfile({ preferredWorkoutTypes: ['any'] })
+      return
+    }
+    const without = profile.preferredWorkoutTypes.filter(t => t !== 'any' && t !== id)
+    const result = profile.preferredWorkoutTypes.includes(id) ? without : [...without, id]
+    updateProfile({ preferredWorkoutTypes: result.length === 0 ? ['any'] : result })
+  }, [profile.preferredWorkoutTypes, updateProfile])
+
+  // ─── Recommendations ──────────────────────────────────────────────────────
 
   const handleGetRecommendations = useCallback(async () => {
     setError('')
@@ -103,12 +136,12 @@ function ForYouContent() {
     setIsLoading(true)
     try {
       const data = await fetchRecommendations({
-        goals: goals.trim() || 'General fitness',
-        fitnessLevel,
-        equipment: selectedEquipment,
-        durationMinutes,
-        platforms: selectedPlatforms,
-        workoutTypes: selectedWorkoutTypes,
+        goals: profile.goals.length > 0 ? profile.goals.join(', ') : 'General fitness',
+        fitnessLevel: profile.fitnessLevel,
+        equipment: profile.equipment,
+        durationMinutes: profile.preferredDuration,
+        platforms: profile.preferredPlatforms,
+        workoutTypes: profile.preferredWorkoutTypes,
       })
       setResults(data)
     } catch (e) {
@@ -117,7 +150,7 @@ function ForYouContent() {
     } finally {
       setIsLoading(false)
     }
-  }, [goals, fitnessLevel, selectedEquipment, durationMinutes])
+  }, [profile, addWorkout])
 
   const handleSave = useCallback(
     (result: AIWorkoutSuggestion) => {
@@ -146,10 +179,9 @@ function ForYouContent() {
   )
 
   const keyExtractor = useCallback((item: AIWorkoutSuggestion) => item.id, [])
-
   const ResultSeparator = useCallback(() => <View style={styles.separator} />, [])
 
-  const isEnabled = selectedEquipment.length > 0 && selectedPlatforms.length > 0
+  const isEnabled = profile.equipment.length > 0 && profile.preferredPlatforms.length > 0
 
   return (
     <KeyboardAvoidingView
@@ -162,68 +194,147 @@ function ForYouContent() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Profile section ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Your Goals</Text>
-          <TextInput
-            style={styles.goalsInput}
-            placeholder="e.g. Lose weight, build muscle, improve endurance..."
-            placeholderTextColor={COLORS.secondaryText}
-            value={goals}
-            onChangeText={setGoals}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
-        </View>
+          <TouchableOpacity
+            style={styles.profileHeader}
+            onPress={() => setProfileExpanded(prev => !prev)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sectionLabel}>Your Profile</Text>
+            <Ionicons
+              name={isProfileSectionOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={COLORS.secondaryText}
+            />
+          </TouchableOpacity>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Fitness Level</Text>
-          <View style={styles.chipRow}>
-            {FITNESS_LEVELS.map((level) => (
-              <TouchableOpacity
-                key={level}
-                style={[styles.chip, fitnessLevel === level && styles.chipSelected]}
-                onPress={() => setFitnessLevel(level)}
-              >
-                <Text style={[styles.chipText, fitnessLevel === level && styles.chipTextSelected]}>
-                  {level}
+          {isProfileSectionOpen && (
+            <View style={styles.profileFields}>
+              {profile.goals.length === 0 && (
+                <Text style={styles.profilePrompt}>
+                  Set up your profile for better recommendations
                 </Text>
+              )}
+
+              <Text style={styles.sectionLabel}>Goals</Text>
+              <View style={styles.chipWrap}>
+                {GOAL_OPTIONS.map(goal => {
+                  const selected = profile.goals.includes(goal)
+                  return (
+                    <TouchableOpacity
+                      key={goal}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                      onPress={() => handleToggleGoal(goal)}
+                    >
+                      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                        {goal}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+
+              <Text style={styles.sectionLabel}>Fitness Level</Text>
+              <View style={styles.chipRow}>
+                {FITNESS_LEVELS.map(level => (
+                  <TouchableOpacity
+                    key={level}
+                    style={[styles.chip, profile.fitnessLevel === level && styles.chipSelected]}
+                    onPress={() => handleSetFitnessLevel(level)}
+                  >
+                    <Text style={[styles.chipText, profile.fitnessLevel === level && styles.chipTextSelected]}>
+                      {level}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.ageRow}>
+                <Text style={styles.sectionLabel}>Age (optional)</Text>
+                <TextInput
+                  style={styles.ageInput}
+                  keyboardType="numeric"
+                  value={ageText}
+                  onChangeText={setAgeText}
+                  onBlur={handleAgeCommit}
+                  onSubmitEditing={handleAgeCommit}
+                  placeholder="—"
+                  placeholderTextColor={COLORS.secondaryText}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.sensitiveToggleRow}
+                onPress={() => setShowSensitiveAreas(prev => !prev)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionLabel}>
+                  {profile.sensitiveAreas.length > 0
+                    ? `Injuries / Sensitive Areas (${profile.sensitiveAreas.length})`
+                    : 'Injuries / Sensitive Areas'}
+                </Text>
+                <Ionicons
+                  name={showSensitiveAreas ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={COLORS.secondaryText}
+                />
               </TouchableOpacity>
-            ))}
-          </View>
+
+              {showSensitiveAreas && (
+                <View style={styles.chipWrap}>
+                  {SENSITIVE_AREA_OPTIONS.map(area => {
+                    const selected = profile.sensitiveAreas.includes(area)
+                    return (
+                      <TouchableOpacity
+                        key={area}
+                        style={[styles.chip, selected && styles.chipSelected]}
+                        onPress={() => handleToggleSensitiveArea(area)}
+                      >
+                        <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                          {area}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
+        {/* ── Session Duration ── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Session Duration</Text>
           <View style={styles.stepperRow}>
             <TouchableOpacity
               style={[
                 styles.stepperButton,
-                durationMinutes === DURATION_OPTIONS[0] && styles.stepperButtonDisabled,
+                profile.preferredDuration === DURATION_OPTIONS[0] && styles.stepperButtonDisabled,
               ]}
               onPress={handleDecreaseDuration}
-              disabled={durationMinutes === DURATION_OPTIONS[0]}
+              disabled={profile.preferredDuration === DURATION_OPTIONS[0]}
             >
               <Ionicons
                 name="remove"
                 size={20}
-                color={durationMinutes === DURATION_OPTIONS[0] ? COLORS.secondaryText : COLORS.accent}
+                color={profile.preferredDuration === DURATION_OPTIONS[0] ? COLORS.secondaryText : COLORS.accent}
               />
             </TouchableOpacity>
-            <Text style={styles.stepperValue}>{durationMinutes} min</Text>
+            <Text style={styles.stepperValue}>{profile.preferredDuration} min</Text>
             <TouchableOpacity
               style={[
                 styles.stepperButton,
-                durationMinutes === DURATION_OPTIONS[DURATION_OPTIONS.length - 1] && styles.stepperButtonDisabled,
+                profile.preferredDuration === DURATION_OPTIONS[DURATION_OPTIONS.length - 1] && styles.stepperButtonDisabled,
               ]}
               onPress={handleIncreaseDuration}
-              disabled={durationMinutes === DURATION_OPTIONS[DURATION_OPTIONS.length - 1]}
+              disabled={profile.preferredDuration === DURATION_OPTIONS[DURATION_OPTIONS.length - 1]}
             >
               <Ionicons
                 name="add"
                 size={20}
                 color={
-                  durationMinutes === DURATION_OPTIONS[DURATION_OPTIONS.length - 1]
+                  profile.preferredDuration === DURATION_OPTIONS[DURATION_OPTIONS.length - 1]
                     ? COLORS.secondaryText
                     : COLORS.accent
                 }
@@ -232,11 +343,12 @@ function ForYouContent() {
           </View>
         </View>
 
+        {/* ── Available Equipment ── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Available Equipment</Text>
           <View style={styles.equipmentGrid}>
-            {EQUIPMENT_OPTIONS.map((item) => {
-              const selected = selectedEquipment.includes(item)
+            {EQUIPMENT_OPTIONS.map(item => {
+              const selected = profile.equipment.includes(item)
               return (
                 <TouchableOpacity
                   key={item}
@@ -250,11 +362,12 @@ function ForYouContent() {
           </View>
         </View>
 
+        {/* ── Workout Type ── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Workout Type</Text>
           <View style={styles.chipWrap}>
-            {WORKOUT_TYPES.map((t) => {
-              const isSelected = selectedWorkoutTypes.includes(t.id)
+            {WORKOUT_TYPES.map(t => {
+              const isSelected = profile.preferredWorkoutTypes.includes(t.id)
               const isAny = t.id === 'any'
               return (
                 <TouchableOpacity
@@ -274,16 +387,17 @@ function ForYouContent() {
           </View>
         </View>
 
+        {/* ── Platforms ── */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Platforms</Text>
           <View style={styles.equipmentGrid}>
-            {PLATFORMS.map((p) => (
+            {PLATFORMS.map(p => (
               <TouchableOpacity
                 key={p.id}
-                style={[styles.chip, selectedPlatforms.includes(p.id) && styles.chipSelected]}
+                style={[styles.chip, profile.preferredPlatforms.includes(p.id) && styles.chipSelected]}
                 onPress={() => handleTogglePlatform(p.id)}
               >
-                <Text style={[styles.chipText, selectedPlatforms.includes(p.id) && styles.chipTextSelected]}>
+                <Text style={[styles.chipText, profile.preferredPlatforms.includes(p.id) && styles.chipTextSelected]}>
                   {p.label}
                 </Text>
               </TouchableOpacity>
@@ -291,6 +405,7 @@ function ForYouContent() {
           </View>
         </View>
 
+        {/* ── Find button ── */}
         <TouchableOpacity
           style={[styles.recommendButton, (!isEnabled || isLoading) && styles.recommendButtonDisabled]}
           onPress={handleGetRecommendations}
@@ -406,15 +521,37 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  goalsInput: {
-    backgroundColor: COLORS.secondaryBackground,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  profileFields: {
+    gap: 10,
+  },
+  profilePrompt: {
+    fontSize: 13,
+    color: COLORS.secondaryText,
+    fontStyle: 'italic',
+  },
+  ageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ageInput: {
+    width: 60,
+    textAlign: 'right',
     fontSize: 15,
     color: COLORS.text,
-    height: 90,
-    textAlignVertical: 'top',
+    backgroundColor: COLORS.secondaryBackground,
+    borderRadius: 8,
+    padding: 8,
+  },
+  sensitiveToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   chipRow: {
     flexDirection: 'row',

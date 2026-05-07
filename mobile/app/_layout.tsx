@@ -7,6 +7,7 @@ import { SubscriptionProvider } from '../context/SubscriptionContext'
 import { WorkoutProvider } from '../context/WorkoutContext'
 import { RoutineProvider } from '../context/RoutineContext'
 import { WorkoutLogProvider } from '../context/WorkoutLogContext'
+import { ProfileProvider } from '../context/ProfileContext'
 import { useClipboardDetection } from '../hooks/useClipboardDetection'
 import { usePendingShareItems } from '../hooks/usePendingShareItems'
 import ClipboardBanner from '../components/ClipboardBanner'
@@ -66,7 +67,9 @@ export default function RootLayout() {
       <WorkoutProvider>
         <RoutineProvider>
           <WorkoutLogProvider>
-            <AppShell />
+            <ProfileProvider>
+              <AppShell />
+            </ProfileProvider>
           </WorkoutLogProvider>
         </RoutineProvider>
       </WorkoutProvider>

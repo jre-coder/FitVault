@@ -78,7 +78,7 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 | Subscriptions | Mocked context — wire `react-native-iap` or RevenueCat for production |
 | Platform | iOS-first (simulator: iPhone 17 Pro); Android untested |
 | Build | Local: `npx expo run:ios` · Cloud: EAS (preview + production) |
-| Tests | Jest + React Native Testing Library (269 tests, enforced via pre-commit hook + CI) + Deno tests for Edge Function |
+| Tests | Jest + React Native Testing Library (320 tests, enforced via pre-commit hook + CI) + Deno tests for Edge Function |
 
 ---
 
@@ -105,10 +105,12 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 | `mobile/services/storage.ts` | Saved workouts AsyncStorage wrapper |
 | `mobile/services/routineStorage.ts` | Routines + weekly schedule persistence |
 | `mobile/services/workoutLogStorage.ts` | Completed session log persistence |
+| `mobile/services/profileStorage.ts` | User profile AsyncStorage persistence (`@fitvault:userProfile`) |
 | `mobile/context/WorkoutContext.tsx` | Workout CRUD + persistence |
 | `mobile/context/RoutineContext.tsx` | Routine + weekly schedule state |
 | `mobile/context/WorkoutLogContext.tsx` | Activity log + computed stats (streak, weekly totals) |
 | `mobile/context/SubscriptionContext.tsx` | Premium status (mock IAP) |
+| `mobile/context/ProfileContext.tsx` | User profile state — goals, fitness level, age, sensitive areas, equipment preferences; auto-persists on every update |
 | `mobile/hooks/useWorkoutTimer.ts` | Stopwatch + rest countdown for execution mode |
 | `mobile/components/WorkoutExecutionModal.tsx` | Guided workout execution UI |
 | `mobile/components/RoutineBuilderModal.tsx` | Build/edit routines |

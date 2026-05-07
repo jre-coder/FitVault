@@ -144,3 +144,36 @@ export interface WorkoutLog {
   workouts: LoggedWorkout[]
   totalSetsLogged: number
 }
+
+export const GOAL_OPTIONS = [
+  'Fat Loss',
+  'Muscle Growth',
+  'Strength',
+  'Endurance',
+  'Flexibility',
+  'Glutes',
+  'Arms',
+  'Core',
+  'General Fitness',
+] as const
+
+export const SENSITIVE_AREA_OPTIONS = [
+  'Hips',
+  'Knees',
+  'Shoulders',
+  'Lower Back',
+  'Neck',
+  'Wrists',
+  'Ankles',
+] as const
+
+export interface UserProfile {
+  goals: string[]
+  fitnessLevel: FitnessLevel
+  age?: number
+  sensitiveAreas: string[]
+  equipment: string[]
+  preferredDuration: number
+  preferredPlatforms: string[]
+  preferredWorkoutTypes: string[]
+}

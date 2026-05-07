@@ -109,11 +109,11 @@ That moment of seeing the problem clearly but not the fix — that is the conver
 - [x] Body part category organization (Browse tab — cards by muscle group)
 - [ ] Workout series detection — if a saved video is a series (multiple parts), break it into individual parts and save each one separately
 - [ ] Multi-part workout support — combine individual parts into compound workouts
-- [ ] User profile basics:
-  - [ ] Age
-  - [ ] Fitness level
-  - [ ] Sensitive areas / injury history (hips, knees, shoulders, lower back, etc.)
-  - [ ] Goals (fat loss, muscle growth, endurance, specific areas)
+- [x] User profile basics:
+  - [x] Age
+  - [x] Fitness level
+  - [x] Sensitive areas / injury history (hips, knees, shoulders, lower back, etc.)
+  - [x] Goals (fat loss, muscle growth, endurance, specific areas)
 
 ---
 
