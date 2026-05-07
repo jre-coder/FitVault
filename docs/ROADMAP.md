@@ -71,8 +71,8 @@ That moment of seeing the problem clearly but not the fix — that is the conver
 - [x] **TikTok links going to YouTube** — stale closure bug in `handleFind` fixed (selectedPlatforms added to dep array)
 - [x] **Platform enforcement** — Claude's returned platform is validated against user's selection post-response; mismatched platforms are overridden and handles cleared to prevent wrong-platform URLs
 - [x] **Search URL quality** — creator name included in all search queries; TikTok falls back to `google.com/search?q=site:tiktok.com+...` for better results
-- [ ] **Share sheet integration** — research iOS Share Extension so users can send links directly from YouTube/Instagram/TikTok into FitVault without copy-paste
-- [ ] **Image import with OCR** — allow multi-image upload; use Apple Vision to read text from screenshots (exercise lists, video descriptions) and parse into structured workout data
+- [x] **Share sheet integration** — iOS Share Extension (`FitVaultShareExtension`) reads incoming URLs, detects platform, lets user tag body parts, writes to App Group shared defaults; main app polls on foreground via `usePendingShareItems`
+- [x] **Image import with OCR** — multi-photo import via `PhotoImportModal`; Claude Vision parses screenshots/photos into structured workout data (title, exercises, sets/reps/weight)
 
 ---
 
@@ -80,17 +80,17 @@ That moment of seeing the problem clearly but not the fix — that is the conver
 
 **Goal:** A user can save a workout and actually do it.
 
-- [ ] Save link from any platform (YouTube, IG, TikTok) with Share Extension
-- [ ] Multi-image import: take photos of workout content → OCR → structured workout
-- [ ] AI parses link/image into structured workout (title, exercises, sets/reps/duration, muscle groups)
-- [ ] Manual edit of parsed workout
-- [ ] Simple workout builder (non-AI, free tier)
-- [ ] Execution mode:
-  - [ ] Integrated timer (exercise duration + rest periods)
-  - [ ] Set/rep logging
-  - [ ] Rest timer between sets
-  - [ ] "Next exercise" flow
-- [ ] Content creator shown on all AI results
+- [x] Save link from any platform (YouTube, IG, TikTok) with Share Extension
+- [x] Multi-image import: take photos of workout content → AI Vision → structured workout
+- [x] AI parses link/image into structured workout (title, exercises, sets/reps/duration, muscle groups)
+- [x] Manual edit of parsed workout (`EditWorkoutModal`)
+- [x] Simple workout builder (non-AI, free tier — `AddWorkoutModal`)
+- [x] Execution mode:
+  - [x] Integrated timer (exercise duration + rest periods)
+  - [x] Set/rep logging
+  - [x] Rest timer between sets
+  - [x] "Next exercise" flow
+- [x] Content creator shown on all AI results
 - [ ] Gym machine entry via photo (identify machine → pre-fill sets/weight)
 
 ---
@@ -99,14 +99,14 @@ That moment of seeing the problem clearly but not the fix — that is the conver
 
 **Goal:** Users can build and follow consistent weekly plans.
 
-- [ ] Weekly workout planner (non-AI, free tier — same plan repeats weekly)
+- [x] Weekly workout planner (non-AI, free tier — weekly grid in Plan tab, routines repeat)
 - [ ] Workout split templates:
   - [ ] Push / Pull / Legs
   - [ ] Back + Biceps / Chest + Triceps / Legs + Shoulders (bro split)
   - [ ] Upper / Lower
   - [ ] Full Body
   - [ ] Custom (user-defined)
-- [ ] Body part category organization
+- [x] Body part category organization (Browse tab — cards by muscle group)
 - [ ] Workout series detection — if a saved video is a series (multiple parts), break it into individual parts and save each one separately
 - [ ] Multi-part workout support — combine individual parts into compound workouts
 - [ ] User profile basics:
