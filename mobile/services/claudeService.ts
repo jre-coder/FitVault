@@ -162,19 +162,26 @@ function buildURL(title: string, creator: string, handle: string, platform: stri
 }
 
 async function callClaude(userPrompt: string, allowedPlatforms?: string[]): Promise<AIWorkoutSuggestion[]> {
-  if (!API_KEY) {
-    throw new Error('EXPO_PUBLIC_CLAUDE_API_KEY is not set. Check your .env.local file.')
+  const proxyUrl = process.env.EXPO_PUBLIC_PROXY_URL
+  const isProxy = !!proxyUrl
+
+  if (!isProxy && !API_KEY) {
+    throw new Error('EXPO_PUBLIC_CLAUDE_API_KEY is not set. Set EXPO_PUBLIC_CLAUDE_API_KEY (dev) or EXPO_PUBLIC_PROXY_URL (production).')
   }
 
-  const response = await fetch(CLAUDE_API_URL, {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'anthropic-version': '2023-06-01',
+    'anthropic-beta': 'prompt-caching-2024-07-31',
+  }
+  if (!isProxy) {
+    headers['x-api-key'] = API_KEY
+    headers['anthropic-dangerous-direct-browser-access'] = 'true'
+  }
+
+  const response = await fetch(proxyUrl ?? CLAUDE_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers,
     body: JSON.stringify({
       model: CLAUDE_MODEL,
       max_tokens: 2048,

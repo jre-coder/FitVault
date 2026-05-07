@@ -119,3 +119,42 @@ describe('prompt caching', () => {
     expect(imageBlocks).toHaveLength(2)
   })
 })
+
+// ─── backend proxy routing ────────────────────────────────────────────────────
+
+describe('backend proxy routing', () => {
+  const PROXY = 'https://myproject.supabase.co/functions/v1/claude-proxy'
+
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_PROXY_URL = PROXY
+  })
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_PROXY_URL
+  })
+
+  it('routes to the proxy URL instead of Claude API when EXPO_PUBLIC_PROXY_URL is set', async () => {
+    mockSuccess(MOCK_RESULT)
+    await analyzeWorkoutPhotos(['img=='])
+    expect(mockFetch.mock.calls[0][0]).toBe(PROXY)
+  })
+
+  it('omits x-api-key header in proxy mode', async () => {
+    mockSuccess(MOCK_RESULT)
+    await analyzeWorkoutPhotos(['img=='])
+    expect(mockFetch.mock.calls[0][1].headers['x-api-key']).toBeUndefined()
+  })
+
+  it('omits anthropic-dangerous-direct-browser-access header in proxy mode', async () => {
+    mockSuccess(MOCK_RESULT)
+    await analyzeWorkoutPhotos(['img=='])
+    expect(mockFetch.mock.calls[0][1].headers['anthropic-dangerous-direct-browser-access']).toBeUndefined()
+  })
+
+  it('still sends anthropic-version and anthropic-beta headers in proxy mode', async () => {
+    mockSuccess(MOCK_RESULT)
+    await analyzeWorkoutPhotos(['img=='])
+    const headers = mockFetch.mock.calls[0][1].headers
+    expect(headers['anthropic-version']).toBe('2023-06-01')
+    expect(headers['anthropic-beta']).toBe('prompt-caching-2024-07-31')
+  })
+})

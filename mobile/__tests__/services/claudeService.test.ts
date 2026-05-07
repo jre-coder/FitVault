@@ -510,3 +510,61 @@ describe('For You results caching — fetchRecommendations', () => {
     expect(results[0].title).toBe('Order Test')
   })
 })
+
+// ─── backend proxy routing ────────────────────────────────────────────────────
+
+describe('backend proxy routing', () => {
+  const PROXY = 'https://myproject.supabase.co/functions/v1/claude-proxy'
+
+  beforeEach(() => {
+    process.env.EXPO_PUBLIC_PROXY_URL = PROXY
+  })
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_PROXY_URL
+  })
+
+  it('routes to the proxy URL instead of Claude API when EXPO_PUBLIC_PROXY_URL is set', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Legs', ['youtube'], ['any'])
+    expect(mockFetch.mock.calls[0][0]).toBe(PROXY)
+  })
+
+  it('does not include x-api-key header in proxy mode', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Legs', ['youtube'], ['any'])
+    expect(mockFetch.mock.calls[0][1].headers['x-api-key']).toBeUndefined()
+  })
+
+  it('does not include anthropic-dangerous-direct-browser-access header in proxy mode', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Legs', ['youtube'], ['any'])
+    expect(mockFetch.mock.calls[0][1].headers['anthropic-dangerous-direct-browser-access']).toBeUndefined()
+  })
+
+  it('still sends anthropic-version and anthropic-beta headers in proxy mode', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchTopWorkouts('Legs', ['youtube'], ['any'])
+    const headers = mockFetch.mock.calls[0][1].headers
+    expect(headers['anthropic-version']).toBe('2023-06-01')
+    expect(headers['anthropic-beta']).toBe('prompt-caching-2024-07-31')
+  })
+
+  it('proxy routing applies to fetchSimilarWorkouts', async () => {
+    const workout: WorkoutItem = {
+      id: 'w1', title: 'Test', url: 'https://youtube.com', sourceType: 'youtube',
+      bodyParts: ['Legs'], notes: '', dateAdded: '2026-01-01', isFavorite: false,
+    }
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchSimilarWorkouts(workout, ['youtube'], ['any'])
+    expect(mockFetch.mock.calls[0][0]).toBe(PROXY)
+  })
+
+  it('proxy routing applies to fetchRecommendations', async () => {
+    mockFetch.mockResolvedValueOnce(makeApiResponse([makeRecommendation()]))
+    await fetchRecommendations({
+      goals: 'build muscle', fitnessLevel: 'Intermediate', equipment: ['Dumbbells'],
+      durationMinutes: 45, platforms: ['youtube'], workoutTypes: ['any'],
+    })
+    expect(mockFetch.mock.calls[0][0]).toBe(PROXY)
+  })
+})

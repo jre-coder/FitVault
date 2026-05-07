@@ -18,7 +18,7 @@ AI features are powered by the Claude API (`mobile/services/claudeService.ts`, `
 
 ## Current Priorities
 
-### 🟡 AI Caching Layer (partially complete — backend proxy still required)
+### ✅ AI Caching Layer (complete — proxy requires deployment to activate)
 
 An audit of all Claude API calls found **zero caching** at any layer. The following fixes have been applied or are still pending.
 
@@ -41,16 +41,17 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 - **Implemented:** `cache_control: { type: "ephemeral" }` added to the `system` block in both `claudeService.ts` and `photoAnalysisService.ts`. System prompts expanded to exceed the 2048-token Haiku minimum. `anthropic-beta: prompt-caching-2024-07-31` header added to all requests.
 - **Estimated savings:** 90% token cost reduction on the system prompt portion of every call.
 
-#### 5. Backend Proxy (security + monitoring)
-- **Gap:** API key is in `EXPO_PUBLIC_CLAUDE_API_KEY` — a public env var readable by anyone who extracts the app bundle. There is no rate limiting or usage monitoring per user.
-- **Fix needed (pre-launch):** Move all Claude API calls behind a backend proxy (e.g., Supabase Edge Function, Cloudflare Worker, or simple Express endpoint). The proxy holds the real key, enforces per-user rate limits, and logs usage for cost tracking.
-- **Priority:** Must be done before App Store release.
+#### 5. ✅ Backend Proxy (code complete — requires deployment to activate)
+- **Implemented:** Supabase Edge Function at `supabase/functions/claude-proxy/index.ts`. Both `claudeService.ts` and `photoAnalysisService.ts` read `EXPO_PUBLIC_PROXY_URL` at call time — when set, requests route to the proxy without the API key; when unset, direct API calls continue (for local dev). The proxy injects the real `CLAUDE_API_KEY` from its Supabase secret.
+- **To activate before App Store release:**
+  1. `supabase login && supabase link --project-ref <your-ref>`
+  2. `supabase secrets set CLAUDE_API_KEY=sk-ant-...`
+  3. `supabase functions deploy claude-proxy`
+  4. Set `EXPO_PUBLIC_PROXY_URL=https://<project>.supabase.co/functions/v1/claude-proxy` in EAS build secrets (preview + production profiles only — leave unset for local dev)
+  5. Remove `EXPO_PUBLIC_CLAUDE_API_KEY` from production build config
+- **Deno tests:** `deno test --allow-env supabase/functions/claude-proxy/index.test.ts`
 
-**Remaining implementation order:**
-1. ~~Prompt caching~~ ✅ done
-2. ~~Discover results caching~~ ✅ done
-3. ~~For You results caching~~ ✅ done
-4. Backend proxy — required before production release
+**All AI caching items complete. ✅**
 
 ---
 
@@ -77,7 +78,7 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 | Subscriptions | Mocked context — wire `react-native-iap` or RevenueCat for production |
 | Platform | iOS-first (simulator: iPhone 17 Pro); Android untested |
 | Build | Local: `npx expo run:ios` · Cloud: EAS (preview + production) |
-| Tests | Jest + React Native Testing Library (259 tests, enforced via pre-commit hook + CI) |
+| Tests | Jest + React Native Testing Library (269 tests, enforced via pre-commit hook + CI) + Deno tests for Edge Function |
 
 ---
 
@@ -95,9 +96,12 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 | `mobile/app/(tabs)/for-you.tsx` | Personalized AI recommendations (premium) |
 | `mobile/types/index.ts` | All shared TypeScript types |
 | `mobile/constants/index.ts` | Colors, icons, body parts, source types |
-| `mobile/services/claudeService.ts` | Discover + For You Claude API calls (with prompt caching + result caching) |
-| `mobile/services/photoAnalysisService.ts` | Photo → workout analysis (Claude Vision, with prompt caching) |
+| `mobile/services/claudeService.ts` | Discover + For You Claude API calls (prompt caching, result caching, proxy routing) |
+| `mobile/services/photoAnalysisService.ts` | Photo → workout analysis (Claude Vision, prompt caching, proxy routing) |
 | `mobile/services/aiResultCache.ts` | AsyncStorage result cache — `getCachedResults`, `setCachedResults`, `hashParams`, `TTL_24H`, `TTL_7D` |
+| `supabase/functions/claude-proxy/index.ts` | Supabase Edge Function proxy — holds real API key, strips browser-access header |
+| `supabase/functions/claude-proxy/index.test.ts` | Deno tests for the proxy (run with `deno test`) |
+| `supabase/config.toml` | Supabase function config (`verify_jwt = false`) |
 | `mobile/services/storage.ts` | Saved workouts AsyncStorage wrapper |
 | `mobile/services/routineStorage.ts` | Routines + weekly schedule persistence |
 | `mobile/services/workoutLogStorage.ts` | Completed session log persistence |

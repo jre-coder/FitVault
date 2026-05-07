@@ -110,15 +110,22 @@ export async function analyzeWorkoutPhotos(base64Images: string[]): Promise<Phot
     },
   }))
 
-  const response = await fetch(CLAUDE_API_URL, {
+  const proxyUrl = process.env.EXPO_PUBLIC_PROXY_URL
+  const isProxy = !!proxyUrl
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'anthropic-version': '2023-06-01',
+    'anthropic-beta': 'prompt-caching-2024-07-31',
+  }
+  if (!isProxy) {
+    headers['x-api-key'] = API_KEY
+    headers['anthropic-dangerous-direct-browser-access'] = 'true'
+  }
+
+  const response = await fetch(proxyUrl ?? CLAUDE_API_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers,
     body: JSON.stringify({
       model: CLAUDE_MODEL,
       max_tokens: 2048,
