@@ -5,13 +5,19 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS } from '../constants'
+import { useProfile } from '../context/ProfileContext'
+import { useWorkoutLogs } from '../context/WorkoutLogContext'
 import { useWorkoutTimer } from '../hooks/useWorkoutTimer'
+import SetRecordingModal from './SetRecordingModal'
+import { getProgressionSuggestion } from '../services/progressionService'
+import { detectPlateau, getGuidanceLevel } from '../services/adaptationService'
 import { saveWorkoutLog } from '../services/workoutLogStorage'
 import {
   ExecutionStep,
@@ -89,9 +95,14 @@ export default function WorkoutExecutionModal({ visible, routine, workouts, onCl
   const [stepIndex, setStepIndex] = useState(0)
   const [setsCompleted, setSetsCompleted] = useState(0)
   const [loggedWorkouts, setLoggedWorkouts] = useState<LoggedWorkout[]>([])
+  const [weightInput, setWeightInput] = useState('')
+  const [repsInput, setRepsInput] = useState('')
+  const [showRecording, setShowRecording] = useState(false)
   const startedAt = useRef(new Date().toISOString())
   const totalSetsRef = useRef(0)
 
+  const { logs } = useWorkoutLogs()
+  const { profile } = useProfile()
   const timer = useWorkoutTimer()
 
   const currentStep = queue[stepIndex]
@@ -99,6 +110,24 @@ export default function WorkoutExecutionModal({ visible, routine, workouts, onCl
 
   const isLastStep = stepIndex === queue.length - 1
   const currentSetNumber = setsCompleted + 1
+
+  const currentExerciseName = currentStep?.kind === 'exercise' ? (currentStep.exercise?.name ?? '') : ''
+
+  const guidanceLevel = getGuidanceLevel(currentExerciseName, logs)
+  const isOnPlateau = detectPlateau(currentExerciseName, logs)
+
+  const [suggestion, setSuggestion] = useState<import('../types').ProgressionSuggestion | null>(null)
+
+  // Recompute suggestion and pre-fill inputs whenever the exercise changes
+  useEffect(() => {
+    if (!currentExerciseName || !profile) return
+    const s = getProgressionSuggestion(currentExerciseName, logs, profile)
+    setSuggestion(s)
+    setWeightInput(s.suggestedWeightKg != null ? String(s.suggestedWeightKg) : '')
+    setRepsInput(s.suggestedReps ?? '')
+  // profile and logs intentionally excluded — suggestion is per-exercise, not per-render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentExerciseName])
 
   const finishWorkout = useCallback((finalLoggedWorkouts: LoggedWorkout[], finalSets: number) => {
     const completedAt = new Date().toISOString()
@@ -174,10 +203,14 @@ export default function WorkoutExecutionModal({ visible, routine, workouts, onCl
   }, []) // only on mount
 
   function appendLoggedSet(step: ExecutionStep, setNumber: number): LoggedWorkout[] {
+    const parsedWeight = weightInput.trim() ? parseFloat(weightInput) : undefined
+    const parsedReps = repsInput.trim() ? parseInt(repsInput, 10) : undefined
     const loggedSet: LoggedSet = {
       exerciseName: step.exercise?.name ?? '',
       setNumber,
       completedAt: new Date().toISOString(),
+      repsCompleted: parsedReps && !isNaN(parsedReps) ? parsedReps : undefined,
+      weightKg: parsedWeight && !isNaN(parsedWeight) ? parsedWeight : undefined,
     }
     setLoggedWorkouts(prev => {
       const existing = prev.findIndex(lw => lw.workoutItemId === step.workoutItemId)
@@ -313,7 +346,52 @@ export default function WorkoutExecutionModal({ visible, routine, workouts, onCl
               <Text style={styles.exerciseMeta}>{metaParts.join(' · ')}</Text>
             )}
 
-            {ex.notes ? <Text style={styles.exerciseNotes}>{ex.notes}</Text> : null}
+            {ex.notes && guidanceLevel === 'full' ? (
+              <Text style={styles.exerciseNotes}>{ex.notes}</Text>
+            ) : null}
+
+            {isOnPlateau && (
+              <View testID="plateau-nudge" style={styles.plateauNudge}>
+                <Text style={styles.plateauNudgeText}>Try varying rep ranges or adding a deload to break through this plateau.</Text>
+              </View>
+            )}
+
+            {suggestion?.lastSessionSummary && guidanceLevel !== 'minimal' && (
+              <View style={styles.progressionCard}>
+                <Text style={styles.progressionLabel}>Last session</Text>
+                <Text style={styles.progressionSummary}>{suggestion.lastSessionSummary}</Text>
+                {suggestion.rationale && guidanceLevel === 'full' ? (
+                  <Text style={styles.progressionRationale}>{suggestion.rationale}</Text>
+                ) : null}
+              </View>
+            )}
+
+            <View style={styles.inputRow}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Weight (kg)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={weightInput}
+                  onChangeText={setWeightInput}
+                  placeholder={suggestion?.suggestedWeightKg != null ? String(suggestion.suggestedWeightKg) : '—'}
+                  placeholderTextColor={COLORS.secondaryText}
+                  keyboardType="decimal-pad"
+                  testID="weight-input"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Reps</Text>
+                <TextInput
+                  style={styles.input}
+                  value={repsInput}
+                  onChangeText={setRepsInput}
+                  placeholder={ex.reps ?? (suggestion?.suggestedReps ?? '—')}
+                  placeholderTextColor={COLORS.secondaryText}
+                  keyboardType="number-pad"
+                  testID="reps-input"
+                />
+              </View>
+            </View>
 
             <View style={styles.setTracker}>
               <Text style={styles.setLabel}>Set {currentSetNumber} of {totalSets}</Text>
@@ -360,12 +438,28 @@ export default function WorkoutExecutionModal({ visible, routine, workouts, onCl
             <TouchableOpacity style={styles.skipBtn} onPress={handleSkipExercise} activeOpacity={0.7}>
               <Text style={styles.skipBtnText}>Skip</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.recordBtn}
+              onPress={() => setShowRecording(true)}
+              activeOpacity={0.7}
+              testID="record-set-btn"
+            >
+              <Ionicons name="videocam-outline" size={18} color={COLORS.accent} />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.logBtn} onPress={handleLogSet} activeOpacity={0.8}>
               <Ionicons name="checkmark-circle" size={20} color="#fff" />
               <Text style={styles.logBtnText}>Log Set</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
+
+        <SetRecordingModal
+          embedded
+          visible={showRecording}
+          exerciseName={currentStep?.exercise?.name ?? ''}
+          onClose={() => setShowRecording(false)}
+          onContentSuggestion={(_suggestion) => setShowRecording(false)}
+        />
       </Modal>
     )
   }
@@ -534,6 +628,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
   },
   logBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  recordBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    backgroundColor: COLORS.accent + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.accent + '40',
+  },
 
   restBody: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   restLabel: { fontSize: 22, fontWeight: '700', color: COLORS.text },
@@ -575,4 +679,41 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
   },
   doneBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
+
+  plateauNudge: {
+    backgroundColor: COLORS.secondaryBackground,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.accent,
+  },
+  plateauNudgeText: { fontSize: 13, color: COLORS.secondaryText },
+
+  progressionCard: {
+    backgroundColor: COLORS.secondaryBackground,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    gap: 4,
+  },
+  progressionLabel: { fontSize: 11, color: COLORS.secondaryText, textTransform: 'uppercase', letterSpacing: 0.8 },
+  progressionSummary: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  progressionRationale: { fontSize: 12, color: COLORS.secondaryText, marginTop: 2 },
+
+  inputRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
+  inputGroup: { flex: 1 },
+  inputLabel: { fontSize: 12, color: COLORS.secondaryText, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.6 },
+  input: {
+    backgroundColor: COLORS.secondaryBackground,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.separator,
+    textAlign: 'center',
+  },
 })

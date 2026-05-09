@@ -20,6 +20,11 @@ interface PaywallModalProps {
 
 const FEATURES = [
   {
+    icon: 'sparkles-outline',
+    title: 'Fix My Workout',
+    detail: 'AI diagnoses your workout and delivers an optimized plan',
+  },
+  {
     icon: 'trophy-outline',
     title: 'Discover Top Workouts',
     detail: 'AI-curated top workouts for any muscle group',

@@ -13,6 +13,7 @@ interface RoutineContextValue {
   weeklySchedule: WeeklySchedule
   isLoaded: boolean
   addRoutine: (data: { name: string; items: RoutineItem[] }) => void
+  addRoutinesBatch: (data: Array<{ name: string; items: RoutineItem[] }>) => Routine[]
   updateRoutine: (routine: Routine) => void
   deleteRoutine: (id: string) => void
   setDaySchedule: (day: DayOfWeek, value: DaySchedule) => void
@@ -50,6 +51,22 @@ export function RoutineProvider({ children }: { children: React.ReactNode }) {
       saveRoutines(next)
       return next
     })
+  }, [])
+
+  const addRoutinesBatch = useCallback((data: Array<{ name: string; items: RoutineItem[] }>): Routine[] => {
+    if (data.length === 0) return []
+    const created: Routine[] = data.map(d => ({
+      id: generateId(),
+      name: d.name,
+      items: d.items,
+      createdAt: new Date().toISOString(),
+    }))
+    setRoutines(prev => {
+      const next = [...prev, ...created]
+      saveRoutines(next)
+      return next
+    })
+    return created
   }, [])
 
   const updateRoutine = useCallback((routine: Routine) => {
@@ -94,7 +111,7 @@ export function RoutineProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <RoutineContext.Provider
-      value={{ routines, weeklySchedule, isLoaded, addRoutine, updateRoutine, deleteRoutine, setDaySchedule, getTodayRoutine }}
+      value={{ routines, weeklySchedule, isLoaded, addRoutine, addRoutinesBatch, updateRoutine, deleteRoutine, setDaySchedule, getTodayRoutine }}
     >
       {children}
     </RoutineContext.Provider>

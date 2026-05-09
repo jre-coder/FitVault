@@ -125,6 +125,22 @@ export interface LoggedSet {
   exerciseName: string
   setNumber: number
   completedAt: string
+  repsCompleted?: number
+  weightKg?: number
+  durationSeconds?: number
+}
+
+export type ProgressionTrend = 'new' | 'improving' | 'plateau' | 'regressing'
+
+export interface ProgressionSuggestion {
+  exerciseName: string
+  suggestedSets: number | null
+  suggestedReps: string | null
+  suggestedWeightKg: number | null
+  suggestedDurationSeconds: number | null
+  lastSessionSummary: string | null
+  trend: ProgressionTrend
+  rationale: string
 }
 
 export interface LoggedWorkout {
@@ -167,6 +183,46 @@ export const SENSITIVE_AREA_OPTIONS = [
   'Ankles',
 ] as const
 
+export interface ParsedWorkoutExercise {
+  name: string
+  sets?: number
+  reps?: string
+  weight?: string
+  duration?: string
+}
+
+export type DiagnosisIssueSeverity = 'error' | 'warning' | 'info'
+
+export interface DiagnosisIssue {
+  severity: DiagnosisIssueSeverity
+  title: string
+  description: string
+}
+
+export interface VideoSuggestion {
+  creator: string    // display name, e.g. "Jeff Nippard"
+  handle: string     // e.g. "jeffnippard"
+  platform: string   // "youtube" | "instagram" | "tiktok"
+  url: string        // channel/profile URL
+}
+
+export interface ExerciseSwap {
+  original: string
+  replacement: string
+  reason: string
+  videoSuggestion?: VideoSuggestion
+}
+
+export interface WorkoutAnalysis {
+  parsedExercises: ParsedWorkoutExercise[]
+  muscleGroups: string[]
+  estimatedDurationMinutes: number
+  issues: DiagnosisIssue[]
+  optimizedExercises: ParsedWorkoutExercise[]
+  swaps: ExerciseSwap[]
+  coachNotes: string
+}
+
 export interface UserProfile {
   goals: string[]
   fitnessLevel: FitnessLevel
@@ -176,4 +232,33 @@ export interface UserProfile {
   preferredDuration: number
   preferredPlatforms: string[]
   preferredWorkoutTypes: string[]
+}
+
+export interface WorkoutSeries {
+  id: string
+  title: string          // user-visible series name, e.g. "Jeff Nippard PPL"
+  workoutIds: string[]   // ordered WorkoutItem IDs (part 1, part 2, …)
+  createdAt: string
+}
+
+export type MachineConfidence = 'high' | 'medium' | 'low'
+
+export interface MachineIdentificationResult {
+  recognized: boolean
+  machineName: string
+  exercises: ParsedWorkoutExercise[]
+  bodyParts: BodyPart[]
+  confidence: MachineConfidence
+  notes?: string
+}
+
+export type TodayRecommendationType = 'routine' | 'rest' | 'no_routines'
+
+export interface TodayRecommendation {
+  type: TodayRecommendationType
+  routine?: Routine
+  reason: string
+  readyMuscles: string[]
+  fatiguedMuscles: string[]
+  daysSinceLastWorkout: number | null
 }

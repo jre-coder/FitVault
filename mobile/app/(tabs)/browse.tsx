@@ -11,10 +11,14 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { BODY_PARTS, COLORS } from '../../constants'
 import { useWorkouts } from '../../context/WorkoutContext'
-import { BodyPart, WorkoutItem } from '../../types'
+import { BodyPart, Routine, WorkoutItem, WorkoutSeries } from '../../types'
 import BodyPartCard from '../../components/BodyPartCard'
 import WorkoutRow from '../../components/WorkoutRow'
 import WorkoutDetailModal from '../../components/WorkoutDetailModal'
+import WorkoutExecutionModal from '../../components/WorkoutExecutionModal'
+import { buildSeriesExecution } from '../../services/seriesExecutionBuilder'
+
+type EphemeralExecution = { routine: Routine; workouts: WorkoutItem[] } | null
 
 interface BodyPartCardData {
   bodyPart: BodyPart
@@ -25,6 +29,7 @@ export default function BrowseScreen() {
   const { workouts } = useWorkouts()
   const [selectedBodyPart, setSelectedBodyPart] = useState<BodyPart | null>(null)
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutItem | null>(null)
+  const [ephemeralExecution, setEphemeralExecution] = useState<EphemeralExecution>(null)
 
   const bodyPartCounts = useMemo<BodyPartCardData[]>(() => {
     return BODY_PARTS.map((part) => ({
@@ -53,6 +58,12 @@ export default function BrowseScreen() {
   const handleCloseDetail = useCallback(() => {
     setSelectedWorkout(null)
   }, [])
+
+  const handleStartSeries = useCallback((series: WorkoutSeries) => {
+    setSelectedWorkout(null)
+    const execution = buildSeriesExecution(series, workouts)
+    setEphemeralExecution(execution)
+  }, [workouts])
 
   const renderBodyPartCard: ListRenderItem<BodyPartCardData> = useCallback(
     ({ item }) => (
@@ -107,7 +118,15 @@ export default function BrowseScreen() {
         )}
 
         {selectedWorkout && (
-          <WorkoutDetailModal workout={selectedWorkout} onClose={handleCloseDetail} />
+          <WorkoutDetailModal workout={selectedWorkout} onClose={handleCloseDetail} onStartSeries={handleStartSeries} />
+        )}
+        {ephemeralExecution && (
+          <WorkoutExecutionModal
+            visible={!!ephemeralExecution}
+            routine={ephemeralExecution.routine}
+            workouts={ephemeralExecution.workouts}
+            onClose={() => setEphemeralExecution(null)}
+          />
         )}
       </SafeAreaView>
     )

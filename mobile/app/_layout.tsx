@@ -8,6 +8,7 @@ import { WorkoutProvider } from '../context/WorkoutContext'
 import { RoutineProvider } from '../context/RoutineContext'
 import { WorkoutLogProvider } from '../context/WorkoutLogContext'
 import { ProfileProvider } from '../context/ProfileContext'
+import { WorkoutSeriesProvider } from '../context/WorkoutSeriesContext'
 import { useClipboardDetection } from '../hooks/useClipboardDetection'
 import { usePendingShareItems } from '../hooks/usePendingShareItems'
 import ClipboardBanner from '../components/ClipboardBanner'
@@ -68,7 +69,9 @@ export default function RootLayout() {
         <RoutineProvider>
           <WorkoutLogProvider>
             <ProfileProvider>
-              <AppShell />
+              <WorkoutSeriesProvider>
+                <AppShell />
+              </WorkoutSeriesProvider>
             </ProfileProvider>
           </WorkoutLogProvider>
         </RoutineProvider>

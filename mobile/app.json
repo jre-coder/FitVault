@@ -16,7 +16,10 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.elrcreative.fitvault",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "FitVault uses your microphone to let you describe your workout by voice.",
+        "NSSpeechRecognitionUsageDescription": "FitVault uses speech recognition to convert your spoken workout description to text.",
+        "NSCameraUsageDescription": "FitVault uses your camera to record a set and count reps. Video is analyzed on-device and never uploaded."
       }
     },
     "android": {

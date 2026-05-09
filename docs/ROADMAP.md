@@ -91,7 +91,7 @@ That moment of seeing the problem clearly but not the fix — that is the conver
   - [x] Rest timer between sets
   - [x] "Next exercise" flow
 - [x] Content creator shown on all AI results
-- [ ] Gym machine entry via photo (identify machine → pre-fill sets/weight)
+- [x] Gym machine entry via photo (identify machine → pre-fill sets/weight)
 
 ---
 
@@ -100,15 +100,15 @@ That moment of seeing the problem clearly but not the fix — that is the conver
 **Goal:** Users can build and follow consistent weekly plans.
 
 - [x] Weekly workout planner (non-AI, free tier — weekly grid in Plan tab, routines repeat)
-- [ ] Workout split templates:
-  - [ ] Push / Pull / Legs
-  - [ ] Back + Biceps / Chest + Triceps / Legs + Shoulders (bro split)
-  - [ ] Upper / Lower
-  - [ ] Full Body
-  - [ ] Custom (user-defined)
+- [x] Workout split templates:
+  - [x] Push / Pull / Legs
+  - [x] Back + Biceps / Chest + Triceps / Legs + Shoulders (bro split)
+  - [x] Upper / Lower
+  - [x] Full Body
+  - [x] Custom (user-defined)
 - [x] Body part category organization (Browse tab — cards by muscle group)
-- [ ] Workout series detection — if a saved video is a series (multiple parts), break it into individual parts and save each one separately
-- [ ] Multi-part workout support — combine individual parts into compound workouts
+- [x] Workout series detection — title pattern matching (Part N, Day N, Week N, Episode N, Vol N, N/M); offers to group into a series on save
+- [x] Multi-part workout support — series groups ordered WorkoutItems; "Start Series" in WorkoutDetailModal chains all parts in WorkoutExecutionModal
 - [x] User profile basics:
   - [x] Age
   - [x] Fitness level
@@ -122,30 +122,54 @@ That moment of seeing the problem clearly but not the fix — that is the conver
 **Goal:** The system tells users what to do and fixes what's wrong.
 
 ### "Fix My Workout" (Voice-to-Coach)
-- [ ] Voice input (iOS Speech-to-Text)
-- [ ] Raw transcript → structured workout JSON (LLM)
-- [ ] Diagnosis engine (rules + AI hybrid):
-  - [ ] Detect redundant movement patterns
-  - [ ] Identify missing elements (stretch-loaded, heavy compound, tempo, etc.)
-  - [ ] Flag progressive overload gaps
-  - [ ] Flag joint/injury risk by age and stated sensitive areas
-- [ ] Output:
-  - [ ] Clear list of issues
-  - [ ] Optimized workout plan
-  - [ ] Specific exercise swaps with reasoning
-  - [ ] Video suggestions for recommended exercises
-- [ ] One-tap "Start this workout" from the output
-- [ ] Paywall: free users see issues only; fix requires upgrade
+- [x] Voice input (iOS Speech-to-Text)
+- [x] Raw transcript → structured workout JSON (LLM)
+- [x] Diagnosis engine (rules + AI hybrid):
+  - [x] Detect redundant movement patterns
+  - [x] Identify missing elements (stretch-loaded, heavy compound, tempo, etc.)
+  - [x] Flag progressive overload gaps
+  - [x] Flag joint/injury risk by age and stated sensitive areas
+- [x] Output:
+  - [x] Clear list of issues
+  - [x] Optimized workout plan
+  - [x] Specific exercise swaps with reasoning
+  - [x] Video suggestions for recommended exercises
+- [x] One-tap "Start this workout" from the output
+- [x] Paywall: free users see issues only; fix requires upgrade
 
 ### "What Should I Do Today?" Engine
-- [ ] Looks at: last workout, muscle recovery, goals, available equipment, time available
-- [ ] Returns: today's recommended workout (with execution mode ready)
+- [x] Looks at: last workout, muscle recovery, goals, available equipment, time available
+- [x] Returns: today's recommended workout (with execution mode ready)
 
 ### Progression Engine
-- [ ] Track weights, reps, duration per exercise over time
-- [ ] Auto-suggest progression (heavier weight, more reps, shorter rest)
-- [ ] Account for: fitness level, age, injury flags
-- [ ] Show user their actual progress visually
+- [x] Track weights, reps, duration per exercise over time
+- [x] Auto-suggest progression (heavier weight, more reps, shorter rest)
+- [x] Account for: fitness level, age, injury flags
+- [x] Show user their actual progress visually
+
+---
+
+## Phase 3.5 — Set Recording & Analysis (On-Device, Privacy-First)
+
+**Goal:** After a set, the user can see objective metrics — rep count and tempo — without any form diagnosis that creates liability.
+
+**Privacy principle:** Video is analyzed entirely on-device using Apple Vision. It is never stored, never uploaded, and deleted immediately after analysis. Users must explicitly consent before each recording session.
+
+**Liability boundary:** FitVault reports objective facts (rep count, seconds per rep). It never says form is wrong or that the user will get hurt. Observations that suggest a gap route to educational content, not direct advice.
+
+### Phase 3.5a — Post-Set Analysis (current)
+- [x] Custom native Expo module (`ExpoSetAnalyzer`) wrapping Apple Vision `VNDetectHumanBodyPoseRequest`
+- [x] Sample video at 10 fps, track primary joint angle, count rep cycles, measure tempo
+- [x] `setAnalysisService.ts` — interprets raw data, builds liability-safe insight copy
+- [x] `SetRecordingModal.tsx` — consent → record → 2-3s on-device processing → results card
+- [x] "Record this set" entry in `WorkoutExecutionModal`
+- [x] Content routing: fast tempo → surfaces tempo-focused workout content
+
+### Phase 3.5b — Real-Time Feedback (future)
+- [ ] Live frame processing on background thread while recording (Vision Camera frame processor)
+- [ ] Real-time rep counter displayed mid-set
+- [ ] Voice cue after set completes: "4 reps at 1.8 seconds — want tempo training content?"
+- [ ] Configurable: users can turn off voice cues
 
 ---
 
@@ -163,14 +187,14 @@ That moment of seeing the problem clearly but not the fix — that is the conver
   - [ ] Score positive vs negative feedback
   - [ ] Extract useful improvement suggestions from comments
   - [ ] Factor into recommendation ranking (popularity ≠ quality)
-- [ ] Safety scoring:
-  - [ ] Identify high joint-risk exercises
-  - [ ] Age-appropriate filtering
-  - [ ] Injury flag filtering (per user profile)
-  - [ ] Flag exercises that are popular but potentially harmful for certain profiles
-- [ ] Workout adaptation intelligence:
-  - [ ] System learns how much guidance a user needs (reduces prompts as they learn a routine)
-  - [ ] Detects plateau patterns and triggers recommendations
+- [x] Safety scoring:
+  - [x] Identify high joint-risk exercises
+  - [x] Age-appropriate filtering
+  - [x] Injury flag filtering (per user profile)
+  - [x] Flag exercises that are popular but potentially harmful for certain profiles
+- [x] Workout adaptation intelligence:
+  - [x] System learns how much guidance a user needs (reduces prompts as they learn a routine)
+  - [x] Detects plateau patterns and triggers recommendations
 
 ---
 

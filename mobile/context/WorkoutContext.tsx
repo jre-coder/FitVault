@@ -5,7 +5,7 @@ import { loadWorkouts, saveWorkouts } from '../services/storage'
 interface WorkoutContextValue {
   workouts: WorkoutItem[]
   isLoaded: boolean
-  addWorkout: (data: Omit<WorkoutItem, 'id' | 'dateAdded'>) => void
+  addWorkout: (data: Omit<WorkoutItem, 'id' | 'dateAdded'>) => WorkoutItem
   updateWorkout: (id: string, updates: Partial<Omit<WorkoutItem, 'id'>>) => void
   deleteWorkout: (id: string) => void
   toggleFavorite: (id: string) => void
@@ -25,7 +25,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const addWorkout = useCallback(
-    (data: Omit<WorkoutItem, 'id' | 'dateAdded'>) => {
+    (data: Omit<WorkoutItem, 'id' | 'dateAdded'>): WorkoutItem => {
       const newItem: WorkoutItem = {
         ...data,
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -36,6 +36,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         saveWorkouts(updated)
         return updated
       })
+      return newItem
     },
     [],
   )

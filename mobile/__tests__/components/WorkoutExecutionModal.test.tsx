@@ -23,8 +23,52 @@ jest.mock('../../hooks/useWorkoutTimer', () => ({
   useWorkoutTimer: () => mockTimer,
 }))
 
+jest.mock('../../components/SetRecordingModal', () => () => null)
+
 jest.mock('../../services/workoutLogStorage', () => ({
   saveWorkoutLog: jest.fn(),
+}))
+
+jest.mock('../../context/WorkoutLogContext', () => ({
+  useWorkoutLogs: () => ({ logs: [] }),
+}))
+
+jest.mock('../../context/ProfileContext', () => ({
+  useProfile: () => ({
+    profile: {
+      goals: ['Muscle Growth'],
+      fitnessLevel: 'Intermediate',
+      age: 30,
+      sensitiveAreas: [],
+      equipment: ['barbell'],
+      preferredDuration: 60,
+      preferredPlatforms: ['youtube'],
+      preferredWorkoutTypes: [],
+    },
+  }),
+}))
+
+const mockGetProgressionSuggestion = jest.fn(() => ({
+  exerciseName: 'Barbell Squat',
+  suggestedSets: null,
+  suggestedReps: null,
+  suggestedWeightKg: null,
+  suggestedDurationSeconds: null,
+  lastSessionSummary: null,
+  trend: 'new' as const,
+  rationale: 'First time logging this exercise.',
+}))
+
+jest.mock('../../services/progressionService', () => ({
+  getProgressionSuggestion: (...args: unknown[]) => mockGetProgressionSuggestion(...args),
+}))
+
+const mockGetGuidanceLevel = jest.fn()
+const mockDetectPlateau = jest.fn()
+
+jest.mock('../../services/adaptationService', () => ({
+  getGuidanceLevel: (...args: unknown[]) => mockGetGuidanceLevel(...args),
+  detectPlateau: (...args: unknown[]) => mockDetectPlateau(...args),
 }))
 
 import { Linking } from 'react-native'
@@ -104,6 +148,8 @@ beforeEach(() => {
   mockTimer.isRestActive = false
   ;(logStorage.saveWorkoutLog as jest.Mock).mockResolvedValue(undefined)
   jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined)
+  mockGetGuidanceLevel.mockReturnValue('full')
+  mockDetectPlateau.mockReturnValue(false)
 })
 
 // Helper to capture and fire the onRestComplete callback
@@ -378,6 +424,141 @@ describe('WorkoutExecutionModal', () => {
       fireEvent.press(screen.getByText('Log Set'))
       fireEvent.press(screen.getAllByText('Done')[0])
       expect(defaultProps.onClose).toHaveBeenCalled()
+    })
+  })
+
+  describe('progression tracking UI', () => {
+    it('renders weight input in exercise phase', () => {
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.getByTestId('weight-input')).toBeTruthy()
+    })
+
+    it('renders reps input in exercise phase', () => {
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.getByTestId('reps-input')).toBeTruthy()
+    })
+
+    it('captures weight and reps in logged set when filled', () => {
+      render(
+        <WorkoutExecutionModal
+          {...defaultProps}
+          routine={SINGLE_STEP_ROUTINE}
+        />
+      )
+      fireEvent.changeText(screen.getByTestId('weight-input'), '85')
+      fireEvent.changeText(screen.getByTestId('reps-input'), '6')
+      fireEvent.press(screen.getByText('Log Set'))
+
+      const saved = (logStorage.saveWorkoutLog as jest.Mock).mock.calls[0][0]
+      const set = saved.workouts[0].setsLogged[0]
+      expect(set.weightKg).toBe(85)
+      expect(set.repsCompleted).toBe(6)
+    })
+
+    it('logs set without reps/weight when inputs are empty', () => {
+      render(
+        <WorkoutExecutionModal
+          {...defaultProps}
+          routine={SINGLE_STEP_ROUTINE}
+        />
+      )
+      // Inputs are empty by default (no suggestion, no history)
+      fireEvent.press(screen.getByText('Log Set'))
+
+      const saved = (logStorage.saveWorkoutLog as jest.Mock).mock.calls[0][0]
+      const set = saved.workouts[0].setsLogged[0]
+      expect(set.weightKg).toBeUndefined()
+      expect(set.repsCompleted).toBeUndefined()
+    })
+
+    it('shows last session card when suggestion has lastSessionSummary', () => {
+      mockGetProgressionSuggestion.mockReturnValueOnce({
+        exerciseName: 'Barbell Squat',
+        suggestedSets: 3,
+        suggestedReps: null,
+        suggestedWeightKg: 87.5,
+        suggestedDurationSeconds: null,
+        lastSessionSummary: '3×5 @ 85kg',
+        trend: 'improving' as const,
+        rationale: "You're progressing well.",
+      })
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.getByText('3×5 @ 85kg')).toBeTruthy()
+    })
+
+    it('does not show last session card when there is no history', () => {
+      // Default mock returns lastSessionSummary: null
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.queryByText('Last session')).toBeNull()
+    })
+  })
+
+  describe('adaptive guidance', () => {
+    const workoutWithNotes: WorkoutItem = {
+      ...EXERCISE_WORKOUT,
+      exercises: [{ name: 'Barbell Squat', sets: 3, reps: '5', notes: 'Keep chest up.' }],
+    }
+
+    it('shows exercise notes when guidance level is "full"', () => {
+      mockGetGuidanceLevel.mockReturnValue('full')
+      render(<WorkoutExecutionModal {...defaultProps} workouts={[workoutWithNotes]} />)
+      expect(screen.getByText('Keep chest up.')).toBeTruthy()
+    })
+
+    it('hides exercise notes when guidance level is "reduced"', () => {
+      mockGetGuidanceLevel.mockReturnValue('reduced')
+      render(<WorkoutExecutionModal {...defaultProps} workouts={[workoutWithNotes]} />)
+      expect(screen.queryByText('Keep chest up.')).toBeNull()
+    })
+
+    it('hides exercise notes when guidance level is "minimal"', () => {
+      mockGetGuidanceLevel.mockReturnValue('minimal')
+      render(<WorkoutExecutionModal {...defaultProps} workouts={[workoutWithNotes]} />)
+      expect(screen.queryByText('Keep chest up.')).toBeNull()
+    })
+
+    it('hides progression rationale when guidance level is "reduced"', () => {
+      mockGetGuidanceLevel.mockReturnValue('reduced')
+      mockGetProgressionSuggestion.mockReturnValue({
+        exerciseName: 'Barbell Squat',
+        suggestedSets: 3,
+        suggestedReps: null,
+        suggestedWeightKg: 90,
+        suggestedDurationSeconds: null,
+        lastSessionSummary: '3×5 @ 87.5kg',
+        trend: 'improving' as const,
+        rationale: "You're progressing well — add 2.5kg.",
+      })
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.queryByText(/You're progressing well/)).toBeNull()
+    })
+
+    it('hides progression card entirely when guidance level is "minimal"', () => {
+      mockGetGuidanceLevel.mockReturnValue('minimal')
+      mockGetProgressionSuggestion.mockReturnValue({
+        exerciseName: 'Barbell Squat',
+        suggestedSets: 3,
+        suggestedReps: null,
+        suggestedWeightKg: 90,
+        suggestedDurationSeconds: null,
+        lastSessionSummary: '3×5 @ 87.5kg',
+        trend: 'improving' as const,
+        rationale: "You're progressing well.",
+      })
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.queryByText('Last session')).toBeNull()
+    })
+
+    it('shows plateau nudge when detectPlateau returns true', () => {
+      mockDetectPlateau.mockReturnValue(true)
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.getByTestId('plateau-nudge')).toBeTruthy()
+    })
+
+    it('does not show plateau nudge when detectPlateau returns false', () => {
+      mockDetectPlateau.mockReturnValue(false)
+      render(<WorkoutExecutionModal {...defaultProps} />)
+      expect(screen.queryByTestId('plateau-nudge')).toBeNull()
     })
   })
 })

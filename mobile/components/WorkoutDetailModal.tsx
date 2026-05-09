@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import {
   Alert,
   Image,
@@ -14,17 +14,33 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { COLORS, SOURCE_COLORS, SOURCE_ICONS, SOURCE_LABELS } from '../constants'
 import { useWorkouts } from '../context/WorkoutContext'
-import { WorkoutItem } from '../types'
+import { useWorkoutLogs } from '../context/WorkoutLogContext'
+import { useWorkoutSeries } from '../context/WorkoutSeriesContext'
+import { useProfile } from '../context/ProfileContext'
+import { ExerciseSessionEntry, getExerciseHistory, getProgressionSuggestion } from '../services/progressionService'
+import { scoreWorkoutSafety, SafetyFlag } from '../services/safetyService'
+import { ParsedWorkoutExercise, ProgressionSuggestion, ProgressionTrend, WorkoutItem, WorkoutSeries } from '../types'
 import EditWorkoutModal from './EditWorkoutModal'
 
 interface WorkoutDetailModalProps {
   workout: WorkoutItem
   onClose: () => void
+  onStartSeries?: (series: WorkoutSeries) => void
 }
 
-export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailModalProps) {
+export default function WorkoutDetailModal({ workout, onClose, onStartSeries }: WorkoutDetailModalProps) {
   const { toggleFavorite, deleteWorkout } = useWorkouts()
+  const { logs } = useWorkoutLogs()
+  const { getSeriesForWorkout } = useWorkoutSeries()
+  const { profile } = useProfile()
   const [showEdit, setShowEdit] = useState(false)
+  const workoutSeries = getSeriesForWorkout(workout.id)
+
+  const safetyResult = useMemo(() => {
+    if (!workout.exercises || workout.exercises.length === 0) return null
+    const result = scoreWorkoutSafety(workout.exercises, profile)
+    return result.flags.length > 0 ? result : null
+  }, [workout.exercises, profile])
 
   const isPhoto = workout.sourceType === 'photo'
   const thumbnail = workout.imageUris?.[0]
@@ -70,7 +86,7 @@ export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailMo
     <Modal visible animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={onClose} testID="close-button">
             <Ionicons name="close" size={24} color={COLORS.secondaryText} />
           </TouchableOpacity>
           <TouchableOpacity onPress={handleToggleFavorite}>
@@ -128,18 +144,16 @@ export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailMo
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Exercises</Text>
               {workout.exercises.map((ex, i) => (
-                <View key={i} style={styles.exerciseRow}>
-                  <Text style={styles.exerciseName}>{ex.name}</Text>
-                  <Text style={styles.exerciseMeta}>
-                    {[
-                      ex.sets ? `${ex.sets} sets` : null,
-                      ex.reps ? `${ex.reps} reps` : null,
-                      ex.weight ?? null,
-                      ex.duration ?? null,
-                    ].filter(Boolean).join(' · ')}
-                  </Text>
-                  {ex.notes ? <Text style={styles.exerciseNotes}>{ex.notes}</Text> : null}
-                </View>
+                <ExerciseRow key={i} exercise={ex} logs={logs} />
+              ))}
+            </View>
+          )}
+
+          {safetyResult && (
+            <View style={styles.section} testID="safety-flags">
+              <Text style={[styles.sectionTitle, styles.safetyTitle]}>Safety Notes</Text>
+              {safetyResult.flags.map((flag, i) => (
+                <SafetyFlagRow key={i} flag={flag} />
               ))}
             </View>
           )}
@@ -148,6 +162,23 @@ export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailMo
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Notes</Text>
               <Text style={styles.notesText}>{workout.notes}</Text>
+            </View>
+          )}
+
+          {workoutSeries && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Series</Text>
+              <Text style={styles.seriesName}>{workoutSeries.title}</Text>
+              {onStartSeries && (
+                <TouchableOpacity
+                  style={styles.startSeriesButton}
+                  onPress={() => onStartSeries(workoutSeries)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="play-circle-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.startSeriesText}>Start Series</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -166,6 +197,169 @@ export default function WorkoutDetailModal({ workout, onClose }: WorkoutDetailMo
     </Modal>
   )
 }
+
+// --- SafetyFlagRow ---
+
+function SafetyFlagRow({ flag }: { flag: SafetyFlag }) {
+  const color = flag.severity === 'warning' ? '#FF9500' : COLORS.accent
+  return (
+    <View style={safetyStyles.flagRow}>
+      <Ionicons
+        name={flag.severity === 'warning' ? 'warning-outline' : 'information-circle-outline'}
+        size={15}
+        color={color}
+        style={safetyStyles.flagIcon}
+      />
+      <View style={safetyStyles.flagContent}>
+        <Text style={[safetyStyles.flagExercise, { color }]}>{flag.exerciseName}</Text>
+        <Text style={safetyStyles.flagReason}>{flag.reason}</Text>
+      </View>
+    </View>
+  )
+}
+
+const safetyStyles = StyleSheet.create({
+  flagRow: { flexDirection: 'row', gap: 8, paddingVertical: 6 },
+  flagIcon: { marginTop: 2, flexShrink: 0 },
+  flagContent: { flex: 1, gap: 2 },
+  flagExercise: { fontSize: 13, fontWeight: '600' },
+  flagReason: { fontSize: 12, color: COLORS.secondaryText, lineHeight: 17 },
+})
+
+// --- ExerciseRow with progress history ---
+
+const TREND_CONFIG: Record<ProgressionTrend, { label: string; color: string; icon: string }> = {
+  new:        { label: 'New',        color: '#888',    icon: 'sparkles-outline' },
+  improving:  { label: 'Improving',  color: '#4ade80', icon: 'trending-up' },
+  plateau:    { label: 'Plateau',    color: '#facc15', icon: 'remove-outline' },
+  regressing: { label: 'Regressing', color: '#f87171', icon: 'trending-down' },
+}
+
+function MiniBarChart({ history }: { history: ExerciseSessionEntry[] }) {
+  const MAX_BARS = 6
+  const recent = history.slice(-MAX_BARS)
+  const values = recent.map(h => h.avgWeightKg ?? h.totalReps ?? 0)
+  const maxVal = Math.max(...values, 1)
+  const BAR_MAX_H = 32
+
+  return (
+    <View style={barStyles.container}>
+      {recent.map((h, i) => {
+        const height = Math.max(4, Math.round((values[i] / maxVal) * BAR_MAX_H))
+        return (
+          <View key={i} style={barStyles.barWrap}>
+            <View style={[barStyles.bar, { height }]} />
+          </View>
+        )
+      })}
+    </View>
+  )
+}
+
+const barStyles = StyleSheet.create({
+  container: { flexDirection: 'row', alignItems: 'flex-end', gap: 4, height: 36, marginTop: 8 },
+  barWrap: { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
+  bar: { width: '70%', backgroundColor: COLORS.accent, borderRadius: 2, opacity: 0.8 },
+})
+
+function ExerciseRow({ exercise, logs }: { exercise: ParsedWorkoutExercise; logs: import('../types').WorkoutLog[] }) {
+  const history = useMemo(() => getExerciseHistory(exercise.name, logs), [exercise.name, logs])
+  const suggestion: ProgressionSuggestion | null = useMemo(
+    () => history.length > 0
+      ? getProgressionSuggestion(exercise.name, logs, {
+          goals: [], fitnessLevel: 'Intermediate', sensitiveAreas: [],
+          equipment: [], preferredDuration: 60, preferredPlatforms: [], preferredWorkoutTypes: [],
+        })
+      : null,
+    [exercise.name, logs, history.length]
+  )
+
+  const metaParts = [
+    exercise.sets ? `${exercise.sets} sets` : null,
+    exercise.reps ? `${exercise.reps} reps` : null,
+    exercise.weight ?? null,
+    exercise.duration ?? null,
+  ].filter(Boolean)
+
+  const trendCfg = suggestion ? TREND_CONFIG[suggestion.trend] : null
+  const personalBest = history.length > 0
+    ? (() => {
+        const weights = history.map(h => h.avgWeightKg).filter((w): w is number => w !== null)
+        const reps = history.map(h => h.totalReps).filter((r): r is number => r !== null)
+        if (weights.length > 0) return `${Math.max(...weights)} kg`
+        if (reps.length > 0) return `${Math.max(...reps)} reps`
+        return null
+      })()
+    : null
+
+  return (
+    <View style={exStyles.container}>
+      <View style={exStyles.topRow}>
+        <View style={exStyles.nameBlock}>
+          <Text style={exStyles.exerciseName}>{exercise.name}</Text>
+          {metaParts.length > 0 && (
+            <Text style={exStyles.exerciseMeta}>{metaParts.join(' · ')}</Text>
+          )}
+          {exercise.notes ? <Text style={exStyles.exerciseNotes}>{exercise.notes}</Text> : null}
+        </View>
+        {trendCfg && (
+          <View style={[exStyles.trendBadge, { backgroundColor: trendCfg.color + '22' }]}>
+            <Ionicons name={trendCfg.icon as never} size={12} color={trendCfg.color} />
+            <Text style={[exStyles.trendLabel, { color: trendCfg.color }]}>{trendCfg.label}</Text>
+          </View>
+        )}
+      </View>
+
+      {history.length > 0 && (
+        <View style={exStyles.historyBlock}>
+          <View style={exStyles.statsRow}>
+            <Text style={exStyles.statLabel}>{history.length} session{history.length !== 1 ? 's' : ''}</Text>
+            {personalBest && (
+              <Text style={exStyles.statLabel}>Personal best: <Text style={exStyles.statValue}>{personalBest}</Text></Text>
+            )}
+          </View>
+
+          {history.length > 1 && <MiniBarChart history={history} />}
+
+          {suggestion?.lastSessionSummary && (
+            <Text style={exStyles.lastSession}>Last: {suggestion.lastSessionSummary}</Text>
+          )}
+          {suggestion?.suggestedWeightKg && (
+            <Text style={exStyles.suggestion}>Next target: {suggestion.suggestedWeightKg} kg</Text>
+          )}
+          {suggestion?.suggestedReps && !suggestion.suggestedWeightKg && (
+            <Text style={exStyles.suggestion}>Next target: {suggestion.suggestedReps} reps</Text>
+          )}
+        </View>
+      )}
+    </View>
+  )
+}
+
+const exStyles = StyleSheet.create({
+  container: {
+    backgroundColor: COLORS.secondaryBackground,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+  },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  nameBlock: { flex: 1, marginRight: 8 },
+  exerciseName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  exerciseMeta: { fontSize: 13, color: COLORS.secondaryText, marginTop: 2 },
+  exerciseNotes: { fontSize: 12, fontStyle: 'italic', color: COLORS.secondaryText, marginTop: 2 },
+  trendBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  trendLabel: { fontSize: 11, fontWeight: '600' },
+  historyBlock: { marginTop: 10 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  statLabel: { fontSize: 12, color: COLORS.secondaryText },
+  statValue: { fontWeight: '700', color: COLORS.text },
+  lastSession: { fontSize: 12, color: COLORS.secondaryText, marginTop: 6 },
+  suggestion: { fontSize: 12, color: COLORS.accent, marginTop: 2, fontWeight: '600' },
+})
 
 const styles = StyleSheet.create({
   container: {
@@ -281,6 +475,28 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
     lineHeight: 22,
+  },
+  safetyTitle: {
+    color: '#FF9500',
+  },
+  seriesName: {
+    fontSize: 15,
+    color: COLORS.secondaryText,
+    marginBottom: 8,
+  },
+  startSeriesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: COLORS.accent,
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  startSeriesText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   actions: {
     flexDirection: 'row',

@@ -16,7 +16,14 @@ import { useWorkouts } from '../../context/WorkoutContext'
 import { useWorkoutLogs } from '../../context/WorkoutLogContext'
 import { COLORS, SOURCE_COLORS, SOURCE_ICONS } from '../../constants'
 import { DayOfWeek, DAYS_OF_WEEK, DaySchedule, Routine, WorkoutItem } from '../../types'
+
+type EphemeralExecution = { routine: Routine; workouts: WorkoutItem[] } | null
+import FixMyWorkoutModal from '../../components/FixMyWorkoutModal'
+import PaywallModal from '../../components/PaywallModal'
 import RoutineBuilderModal from '../../components/RoutineBuilderModal'
+import SplitTemplateModal from '../../components/SplitTemplateModal'
+import MachineScanModal from '../../components/MachineScanModal'
+import WhatShouldIDoModal from '../../components/WhatShouldIDoModal'
 import WorkoutDetailModal from '../../components/WorkoutDetailModal'
 import WorkoutExecutionModal from '../../components/WorkoutExecutionModal'
 
@@ -47,6 +54,12 @@ export default function PlanScreen() {
   const { completedDates, refreshLogs } = useWorkoutLogs()
 
   const [showBuilder, setShowBuilder] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [showFixMyWorkout, setShowFixMyWorkout] = useState(false)
+  const [showMachineScan, setShowMachineScan] = useState(false)
+  const [showWhatShouldIDo, setShowWhatShouldIDo] = useState(false)
+  const [showPaywall, setShowPaywall] = useState(false)
+  const [ephemeralExecution, setEphemeralExecution] = useState<EphemeralExecution>(null)
   const [editingRoutine, setEditingRoutine] = useState<Routine | undefined>()
   const [dayPickerFor, setDayPickerFor] = useState<DayOfWeek | null>(null)
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutItem | null>(null)
@@ -99,16 +112,72 @@ export default function PlanScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Plan</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => { setEditingRoutine(undefined); setShowBuilder(true) }}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.templateButton}
+            onPress={() => setShowTemplates(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="grid-outline" size={18} color={COLORS.accent} />
+            <Text style={styles.templateButtonText}>Templates</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => { setEditingRoutine(undefined); setShowBuilder(true) }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="add" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* AI Coach entries */}
+        <View style={styles.aiCoachSection}>
+          <TouchableOpacity
+            style={styles.aiCoachCard}
+            onPress={() => setShowWhatShouldIDo(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.aiCoachIconCircle}>
+              <Ionicons name="today-outline" size={22} color={COLORS.accent} />
+            </View>
+            <View style={styles.aiCoachText}>
+              <Text style={styles.aiCoachTitle}>What Should I Do Today?</Text>
+              <Text style={styles.aiCoachSubtitle}>Get a recovery-based recommendation for today's session</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.secondaryText} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.aiCoachCard, { marginTop: 10 }]}
+            onPress={() => setShowFixMyWorkout(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.aiCoachIconCircle}>
+              <Ionicons name="sparkles" size={22} color={COLORS.accent} />
+            </View>
+            <View style={styles.aiCoachText}>
+              <Text style={styles.aiCoachTitle}>Fix My Workout</Text>
+              <Text style={styles.aiCoachSubtitle}>Describe your session — AI finds what's wrong and fixes it</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.secondaryText} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.aiCoachCard, { marginTop: 10 }]}
+            onPress={() => setShowMachineScan(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.aiCoachIconCircle}>
+              <Ionicons name="camera-outline" size={22} color={COLORS.accent} />
+            </View>
+            <View style={styles.aiCoachText}>
+              <Text style={styles.aiCoachTitle}>Scan Machine</Text>
+              <Text style={styles.aiCoachSubtitle}>Photo any gym machine — AI identifies it and suggests exercises</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.secondaryText} />
+          </TouchableOpacity>
+        </View>
+
         {/* Today */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today</Text>
@@ -292,12 +361,70 @@ export default function PlanScreen() {
         <WorkoutDetailModal workout={selectedWorkout} onClose={() => setSelectedWorkout(null)} />
       )}
 
+      <SplitTemplateModal
+        visible={showTemplates}
+        onClose={() => setShowTemplates(false)}
+      />
+
+      <WhatShouldIDoModal
+        visible={showWhatShouldIDo}
+        onClose={() => setShowWhatShouldIDo(false)}
+        onRequestUpgrade={() => {
+          setShowWhatShouldIDo(false)
+          setShowPaywall(true)
+        }}
+        onStartWorkout={(routine, workoutItems) => {
+          setShowWhatShouldIDo(false)
+          setEphemeralExecution({ routine, workouts: workoutItems })
+        }}
+      />
+
+      <FixMyWorkoutModal
+        visible={showFixMyWorkout}
+        onClose={() => setShowFixMyWorkout(false)}
+        onRequestUpgrade={() => {
+          setShowFixMyWorkout(false)
+          setShowPaywall(true)
+        }}
+        onStartWorkout={(routine, workouts) => {
+          setShowFixMyWorkout(false)
+          setEphemeralExecution({ routine, workouts })
+        }}
+      />
+
+      <MachineScanModal
+        visible={showMachineScan}
+        onClose={() => setShowMachineScan(false)}
+        onRequestUpgrade={() => {
+          setShowMachineScan(false)
+          setShowPaywall(true)
+        }}
+        onStartWorkout={(routine, workoutItems) => {
+          setShowMachineScan(false)
+          setEphemeralExecution({ routine, workouts: workoutItems })
+        }}
+      />
+
+      <PaywallModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
+
       {showExecution && todayRoutine && (
         <WorkoutExecutionModal
           visible={showExecution}
           routine={todayRoutine}
           workouts={workouts}
           onClose={() => { setShowExecution(false); refreshLogs() }}
+        />
+      )}
+
+      {ephemeralExecution && (
+        <WorkoutExecutionModal
+          visible={!!ephemeralExecution}
+          routine={ephemeralExecution.routine}
+          workouts={ephemeralExecution.workouts}
+          onClose={() => { setEphemeralExecution(null); refreshLogs() }}
         />
       )}
     </SafeAreaView>
@@ -315,11 +442,42 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerTitle: { fontSize: 32, fontWeight: '800', color: COLORS.text },
+  headerButtons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  templateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+  },
+  templateButtonText: { fontSize: 14, fontWeight: '600', color: COLORS.accent },
   addButton: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: COLORS.accent,
     alignItems: 'center', justifyContent: 'center',
   },
+  aiCoachSection: { paddingHorizontal: 16, paddingTop: 4, marginBottom: 20 },
+  aiCoachCard: {
+    backgroundColor: COLORS.accent + '0D',
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.accent + '30',
+  },
+  aiCoachIconCircle: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: COLORS.accent + '1A',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  aiCoachText: { flex: 1, gap: 2 },
+  aiCoachTitle: { fontSize: 15, fontWeight: '700', color: COLORS.accent },
+  aiCoachSubtitle: { fontSize: 12, color: COLORS.secondaryText, lineHeight: 17 },
   section: { paddingHorizontal: 16, marginBottom: 28 },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
   todayCard: {

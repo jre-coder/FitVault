@@ -177,6 +177,72 @@ describe('RoutineContext', () => {
     })
   })
 
+  describe('addRoutinesBatch', () => {
+    it('adds multiple routines at once', async () => {
+      const { result } = renderHook(() => useRoutines(), { wrapper })
+      await act(async () => {})
+      await act(async () => {
+        result.current.addRoutinesBatch([
+          { name: 'Push', items: [] },
+          { name: 'Pull', items: [] },
+          { name: 'Legs', items: [] },
+        ])
+      })
+      expect(result.current.routines).toHaveLength(3)
+      expect(result.current.routines.map(r => r.name)).toEqual(
+        expect.arrayContaining(['Push', 'Pull', 'Legs'])
+      )
+    })
+
+    it('returns the created Routine objects with generated ids', async () => {
+      const { result } = renderHook(() => useRoutines(), { wrapper })
+      await act(async () => {})
+      let created: Routine[] = []
+      await act(async () => {
+        created = result.current.addRoutinesBatch([
+          { name: 'Upper', items: [] },
+          { name: 'Lower', items: [] },
+        ])
+      })
+      expect(created).toHaveLength(2)
+      expect(created[0].id).toBeTruthy()
+      expect(created[1].id).toBeTruthy()
+      expect(created[0].id).not.toBe(created[1].id)
+      expect(created[0].name).toBe('Upper')
+      expect(created[1].name).toBe('Lower')
+    })
+
+    it('persists all routines to storage in a single save call', async () => {
+      const { result } = renderHook(() => useRoutines(), { wrapper })
+      await act(async () => {})
+      await act(async () => {
+        result.current.addRoutinesBatch([
+          { name: 'A', items: [] },
+          { name: 'B', items: [] },
+        ])
+      })
+      // Only one save call for the batch
+      expect(mockSave).toHaveBeenCalledTimes(1)
+      expect(mockSave).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ name: 'A' }),
+          expect.objectContaining({ name: 'B' }),
+        ])
+      )
+    })
+
+    it('handles empty batch without error', async () => {
+      const { result } = renderHook(() => useRoutines(), { wrapper })
+      await act(async () => {})
+      let created: Routine[] = []
+      await act(async () => {
+        created = result.current.addRoutinesBatch([])
+      })
+      expect(created).toEqual([])
+      expect(result.current.routines).toHaveLength(0)
+    })
+  })
+
   describe('getTodayRoutine', () => {
     it('returns the routine scheduled for today', async () => {
       const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as keyof WeeklySchedule

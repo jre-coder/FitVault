@@ -15,7 +15,9 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Clipboard from 'expo-clipboard'
 import { BODY_PARTS, COLORS, SOURCE_LABELS, SOURCE_TYPES } from '../constants'
 import { useWorkouts } from '../context/WorkoutContext'
-import { BodyPart, SourceType } from '../types'
+import { useWorkoutSeries } from '../context/WorkoutSeriesContext'
+import { detectSeries } from '../services/seriesDetectionService'
+import { BodyPart, SourceType, WorkoutItem, WorkoutSeries } from '../types'
 
 interface AddWorkoutModalProps {
   visible: boolean
@@ -33,12 +35,19 @@ function detectSource(url: string): SourceType {
 
 export default function AddWorkoutModal({ visible, onClose, initialURL }: AddWorkoutModalProps) {
   const { addWorkout } = useWorkouts()
+  const { series, createSeries, addWorkoutToSeries } = useWorkoutSeries()
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [sourceType, setSourceType] = useState<SourceType>('youtube')
   const [selectedBodyParts, setSelectedBodyParts] = useState<BodyPart[]>([])
   const [notes, setNotes] = useState('')
   const [urlError, setUrlError] = useState('')
+  const [seriesStep, setSeriesStep] = useState<{
+    savedItem: WorkoutItem
+    partNumber: number
+    seriesName: string | null
+    matchingSeries: WorkoutSeries[]
+  } | null>(null)
 
   useEffect(() => {
     if (visible) {
@@ -74,39 +83,102 @@ export default function AddWorkoutModal({ visible, onClose, initialURL }: AddWor
     )
   }, [])
 
+  const resetForm = useCallback(() => {
+    setTitle('')
+    setUrl('')
+    setSourceType('youtube')
+    setSelectedBodyParts([])
+    setNotes('')
+    setUrlError('')
+    setSeriesStep(null)
+  }, [])
+
   const handleSave = useCallback(() => {
     if (!url.startsWith('http')) {
       setUrlError('URL must start with http:// or https://')
       return
     }
-    addWorkout({
-      title: title.trim(),
+    const trimmedTitle = title.trim()
+    const saved = addWorkout({
+      title: trimmedTitle,
       url: url.trim(),
       sourceType,
       bodyParts: selectedBodyParts,
       notes: notes.trim(),
       isFavorite: false,
     })
-    setTitle('')
-    setUrl('')
-    setSourceType('youtube')
-    setSelectedBodyParts([])
-    setNotes('')
-    setUrlError('')
+    const detected = detectSeries(trimmedTitle)
+    if (detected.isSeries && detected.partNumber !== null) {
+      const matchingSeries = detected.seriesName
+        ? series.filter(s => s.title.toLowerCase() === detected.seriesName!.toLowerCase())
+        : []
+      setSeriesStep({
+        savedItem: saved,
+        partNumber: detected.partNumber,
+        seriesName: detected.seriesName,
+        matchingSeries,
+      })
+    } else {
+      resetForm()
+      onClose()
+    }
+  }, [title, url, sourceType, selectedBodyParts, notes, addWorkout, series, resetForm, onClose])
+
+  const handleCreateNewSeries = useCallback(async () => {
+    if (!seriesStep) return
+    await createSeries(seriesStep.seriesName ?? seriesStep.savedItem.title, [seriesStep.savedItem.id])
+    resetForm()
     onClose()
-  }, [title, url, sourceType, selectedBodyParts, notes, addWorkout, onClose])
+  }, [seriesStep, createSeries, resetForm, onClose])
+
+  const handleAddToExisting = useCallback(async (targetSeries: WorkoutSeries) => {
+    if (!seriesStep) return
+    await addWorkoutToSeries(targetSeries.id, seriesStep.savedItem.id)
+    resetForm()
+    onClose()
+  }, [seriesStep, addWorkoutToSeries, resetForm, onClose])
+
+  const handleSkipSeries = useCallback(() => {
+    resetForm()
+    onClose()
+  }, [resetForm, onClose])
 
   const handleClose = useCallback(() => {
-    setTitle('')
-    setUrl('')
-    setSourceType('youtube')
-    setSelectedBodyParts([])
-    setNotes('')
-    setUrlError('')
+    resetForm()
     onClose()
-  }, [onClose])
+  }, [resetForm, onClose])
 
   const isSaveDisabled = !title.trim() || !url.trim()
+
+  if (seriesStep) {
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.container}>
+          <View style={styles.seriesPromptContainer}>
+            <Text style={styles.seriesPromptTitle}>Part of a series?</Text>
+            <Text style={styles.seriesPromptBody}>
+              {`This looks like Part ${seriesStep.partNumber}${seriesStep.seriesName ? ` of "${seriesStep.seriesName}"` : ''}. Link it to a series?`}
+            </Text>
+            {seriesStep.matchingSeries.map(s => (
+              <TouchableOpacity
+                key={s.id}
+                style={styles.seriesButton}
+                onPress={() => handleAddToExisting(s)}
+              >
+                <Text style={styles.seriesButtonText}>{`Add to "${s.title}"`}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.seriesButton} onPress={handleCreateNewSeries}>
+              <Text style={styles.seriesButtonText}>Create New Series</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.seriesSkipButton} onPress={handleSkipSeries}>
+              <Text style={styles.seriesSkipText}>Skip</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+    )
+  }
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -334,5 +406,42 @@ const styles = StyleSheet.create({
   notesInput: {
     height: 100,
     paddingTop: 12,
+  },
+  seriesPromptContainer: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    gap: 16,
+  },
+  seriesPromptTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+  },
+  seriesPromptBody: {
+    fontSize: 15,
+    color: COLORS.secondaryText,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  seriesButton: {
+    backgroundColor: COLORS.accent,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  seriesButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  seriesSkipButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  seriesSkipText: {
+    fontSize: 16,
+    color: COLORS.secondaryText,
   },
 })
