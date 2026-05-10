@@ -6,11 +6,20 @@ FitVault is a cross-platform mobile app (React Native + Expo + TypeScript) that 
 
 Core features:
 - **My Workouts** — save and manage workout links/photos, tagged by body part and source
-- **Browse** — filter saved workouts by category
+- **Browse** — filter saved workouts by category; view safety flags and series membership per workout
 - **Discover** — AI-powered suggestions for top workouts by body part (premium)
 - **Plan** — build routines from saved workouts, schedule them on a weekly grid, execute guided workout sessions with timers and set logging
 - **Activity** — streak tracker, weekly stats, and full session history
 - **For You** — personalized AI recommendations based on user goals, fitness level, equipment, and duration (premium)
+- **Fix My Workout** — voice-to-coach: speak a workout, get AI diagnosis of issues (redundant patterns, missing elements, overload gaps, injury risk), receive an optimized plan with exercise swaps and video suggestions (premium)
+- **What Should I Do Today?** — decision engine that considers last workout, recovery, goals, equipment, and time available; returns a ready-to-execute recommendation
+- **Progression Engine** — tracks weights/reps/duration per exercise over time; auto-suggests next session targets; shows progress in WorkoutDetailModal
+- **Safety Scoring** — flags high-risk exercises per user profile (sensitive areas, age, universal risk rules); shown in WorkoutDetailModal
+- **Workout Adaptation** — reduces UI guidance as user masters an exercise (full → reduced → minimal); detects plateaus and surfaces a nudge during execution
+- **Set Recording & Analysis** — post-set video recording analyzed entirely on-device via Apple Vision (rep count, tempo); never stored or uploaded
+- **Workout Series** — groups multi-part workouts (Part N / Day N / Week N patterns); "Start Series" chains all parts in WorkoutExecutionModal
+- **Gym Machine Scan** — identify a machine from a photo → pre-fill exercise name, sets, weight
+- **Split Templates** — Push/Pull/Legs, Upper/Lower, Full Body, Bro Split, Custom; generates a ready-to-use routine
 
 AI features are powered by the Claude API (`mobile/services/claudeService.ts`, `mobile/services/photoAnalysisService.ts`). Subscriptions gate premium features — currently mocked, ready for `react-native-iap` or RevenueCat wiring (`mobile/context/SubscriptionContext.tsx`).
 
@@ -75,10 +84,11 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 | Navigation | Expo Router v4 (file-based) |
 | Persistence | AsyncStorage (JSON) |
 | AI | Claude API — `claude-haiku-4-5` (direct HTTPS, client-side key — move to backend proxy before release) |
+| On-device ML | Apple Vision (`VNDetectHumanBodyPoseRequest`) via custom Expo module (`expo-set-analyzer`) |
 | Subscriptions | Mocked context — wire `react-native-iap` or RevenueCat for production |
 | Platform | iOS-first (simulator: iPhone 17 Pro); Android untested |
 | Build | Local: `npx expo run:ios` · Cloud: EAS (preview + production) |
-| Tests | Jest + React Native Testing Library (320 tests, enforced via pre-commit hook + CI) + Deno tests for Edge Function |
+| Tests | Jest + React Native Testing Library (759 tests, enforced via pre-commit hook + CI) + Deno tests for Edge Function |
 
 ---
 
@@ -87,34 +97,62 @@ An audit of all Claude API calls found **zero caching** at any layer. The follow
 | File | Purpose |
 |---|---|
 | `mobile/app/_layout.tsx` | Root layout, context providers |
-| `mobile/app/(tabs)/_layout.tsx` | Tab bar configuration (6 tabs) |
+| `mobile/app/(tabs)/_layout.tsx` | Tab bar configuration |
 | `mobile/app/(tabs)/index.tsx` | My Workouts tab |
-| `mobile/app/(tabs)/browse.tsx` | Browse/filter tab |
+| `mobile/app/(tabs)/browse.tsx` | Browse/filter tab; hosts WorkoutDetailModal + series execution |
 | `mobile/app/(tabs)/discover.tsx` | AI discovery tab (premium) |
 | `mobile/app/(tabs)/plan.tsx` | Weekly plan + routine execution |
 | `mobile/app/(tabs)/history.tsx` | Activity log + streak stats |
 | `mobile/app/(tabs)/for-you.tsx` | Personalized AI recommendations (premium) |
 | `mobile/types/index.ts` | All shared TypeScript types |
 | `mobile/constants/index.ts` | Colors, icons, body parts, source types |
+| **Services** | |
 | `mobile/services/claudeService.ts` | Discover + For You Claude API calls (prompt caching, result caching, proxy routing) |
 | `mobile/services/photoAnalysisService.ts` | Photo → workout analysis (Claude Vision, prompt caching, proxy routing) |
-| `mobile/services/aiResultCache.ts` | AsyncStorage result cache — `getCachedResults`, `setCachedResults`, `hashParams`, `TTL_24H`, `TTL_7D` |
-| `supabase/functions/claude-proxy/index.ts` | Supabase Edge Function proxy — holds real API key, strips browser-access header |
-| `supabase/functions/claude-proxy/index.test.ts` | Deno tests for the proxy (run with `deno test`) |
-| `supabase/config.toml` | Supabase function config (`verify_jwt = false`) |
+| `mobile/services/fixMyWorkoutService.ts` | Voice transcript → diagnosis + optimized plan + exercise swaps (Claude) |
+| `mobile/services/machineIdentificationService.ts` | Gym machine photo → exercise name (Claude Vision) |
+| `mobile/services/progressionService.ts` | Per-exercise history lookup + next-session suggestion (weight/reps/trend) |
+| `mobile/services/safetyService.ts` | Rules-based safety scoring — injury flags, age filtering, universal risk rules |
+| `mobile/services/adaptationService.ts` | Guidance level (full/reduced/minimal) + plateau detection from workout logs |
+| `mobile/services/seriesDetectionService.ts` | Regex-based title pattern matching for workout series (Part N, Day N, Week N…) |
+| `mobile/services/seriesExecutionBuilder.ts` | Converts a WorkoutSeries + WorkoutItems into an ephemeral Routine for execution |
+| `mobile/services/setAnalysisService.ts` | Interprets raw Apple Vision body-pose data into liability-safe rep/tempo insights |
+| `mobile/services/splitTemplates.ts` | Push/Pull/Legs, Upper/Lower, Full Body, Bro Split, Custom template definitions |
+| `mobile/services/todayRecommendationService.ts` | "What Should I Do Today?" decision logic |
+| `mobile/services/aiResultCache.ts` | AsyncStorage result cache — `getCachedResults`, `setCachedResults`, `hashParams`, TTLs |
 | `mobile/services/storage.ts` | Saved workouts AsyncStorage wrapper |
 | `mobile/services/routineStorage.ts` | Routines + weekly schedule persistence |
 | `mobile/services/workoutLogStorage.ts` | Completed session log persistence |
+| `mobile/services/workoutSeriesStorage.ts` | WorkoutSeries CRUD in AsyncStorage (`@fitvault:workoutSeries`) |
 | `mobile/services/profileStorage.ts` | User profile AsyncStorage persistence (`@fitvault:userProfile`) |
+| **Context** | |
 | `mobile/context/WorkoutContext.tsx` | Workout CRUD + persistence |
 | `mobile/context/RoutineContext.tsx` | Routine + weekly schedule state |
 | `mobile/context/WorkoutLogContext.tsx` | Activity log + computed stats (streak, weekly totals) |
+| `mobile/context/WorkoutSeriesContext.tsx` | Workout series list + CRUD; `getSeriesForWorkout` for sync lookup |
 | `mobile/context/SubscriptionContext.tsx` | Premium status (mock IAP) |
-| `mobile/context/ProfileContext.tsx` | User profile state — goals, fitness level, age, sensitive areas, equipment preferences; auto-persists on every update |
-| `mobile/hooks/useWorkoutTimer.ts` | Stopwatch + rest countdown for execution mode |
-| `mobile/components/WorkoutExecutionModal.tsx` | Guided workout execution UI |
+| `mobile/context/ProfileContext.tsx` | User profile state — goals, fitness level, age, sensitive areas, equipment; auto-persists |
+| **Components** | |
+| `mobile/components/WorkoutExecutionModal.tsx` | Guided workout execution — timer, set logging, adaptive guidance, plateau nudge |
+| `mobile/components/WorkoutDetailModal.tsx` | Workout detail view — progression history, safety flags, series membership |
 | `mobile/components/RoutineBuilderModal.tsx` | Build/edit routines |
+| `mobile/components/AddWorkoutModal.tsx` | Manual workout entry + series detection step (inline, no modal stacking) |
+| `mobile/components/FixMyWorkoutModal.tsx` | Voice-to-coach UI — diagnosis, swaps, video suggestions, paywall gate |
+| `mobile/components/WhatShouldIDoModal.tsx` | Today's recommendation UI |
+| `mobile/components/SplitTemplateModal.tsx` | Split template picker → generates routine |
+| `mobile/components/SetRecordingModal.tsx` | Consent → record → on-device analysis → insights card |
+| `mobile/components/MachineScanModal.tsx` | Gym machine photo → exercise pre-fill |
 | `mobile/components/PhotoImportModal.tsx` | Photo import + AI analysis |
+| **Hooks** | |
+| `mobile/hooks/useWorkoutTimer.ts` | Stopwatch + rest countdown for execution mode |
+| `mobile/hooks/useSpeechRecognition.ts` | iOS Speech-to-Text wrapper for Fix My Workout voice input |
+| `mobile/hooks/useVideoRecording.ts` | Camera access + recording lifecycle for SetRecordingModal |
+| **Native module** | |
+| `mobile/modules/expo-set-analyzer/` | Custom Expo module — wraps Apple Vision body-pose detection for rep counting |
+| **Backend** | |
+| `supabase/functions/claude-proxy/index.ts` | Supabase Edge Function proxy — holds real API key, strips browser-access header |
+| `supabase/functions/claude-proxy/index.test.ts` | Deno tests for the proxy (run with `deno test`) |
+| `supabase/config.toml` | Supabase function config (`verify_jwt = false`) |
 | `mobile/.env.example` | Required env var template |
 
 ---
